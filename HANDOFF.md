@@ -10,6 +10,9 @@ Rebuilt the Products screen (`src/pages/Products.tsx`, `src/imageStyles.css`, `s
 Images use the existing Telstra `imageUrl` per variant with a graceful onError fallback to the original placeholder box (tested by simulating a network-blocked image load); real Telstra hotlinked images were not re-verified live this session (no outbound network in this container) — the underlying `imageUrl` plumbing was already verified working in an earlier session per the entries below.
 Verified this session: `npm run check`, `npm test` (25 passed), `npm run build`, `npm run deploy:check` all pass. Visual check done via a local Vite dev server + headless Chromium screenshots at desktop (1400px) and mobile (390px) widths — layout, swatch/capacity interaction and responsive stacking confirmed; device images render as the placeholder box in this sandboxed check since outbound network is unavailable here.
 
+## Session update — Sound alerts
+Added an opt-in "Play a sound too" toggle next to the existing OS-notification toggle in the Find page's monitor panel (`src/App.tsx`). When enabled, a short Web Audio beep plays for each newly-seen available stock key (same `scan.diff`/`stockKey` change-detection already used for notifications and the "changed since last check" filter), deduped per check via a `chimed` ref cleared alongside the existing `notified` ref in `check()`. No new dependencies; wrapped in try/catch since `AudioContext` can be blocked before a user gesture in some browsers — visual highlighting of new stock still works either way. `npm run check`/`npm test`/`npm run build` all pass; actual audible playback was not device-tested this session (no audio output in this sandbox), consistent with the existing notification permission caveat in Verification limits below.
+
 ## Verified
 - Type check passed (also included in build).
 - npm test: 25 passed on Vitest 4.1.11.
