@@ -56,4 +56,5 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [x] Sound alerts.
 - [x] Dark mode.
 - [x] Public deployment authorized and verified 2026-09-16: https://iphone-stock-finder-au.mphillips-au.workers.dev (live scan and desktop/mobile smoke checks).
+- [x] Verified live against real telstra.com.au (2026-09-16): Telstra's product-page JSON does carry a genuine multi-image gallery, distinct per colour. Found and fixed a real bug in the process — Telstra 403s the product-page fetch when no User-Agent is sent, so production was silently stuck on the fallback catalogue; see HANDOFF.md.
 
