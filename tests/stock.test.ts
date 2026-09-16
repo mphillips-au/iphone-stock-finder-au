@@ -5,7 +5,7 @@ import { context } from '../src/lib/telstra/http';
 import { stockPage } from '../src/lib/telstra/stock';
 import { getProducts, parseProducts } from '../src/lib/telstra/products';
 import { runIndexCycle, readLastFullCycleAt } from '../src/lib/telstra/indexer';
-import { snapshotPage, readStatus } from '../src/lib/telstra/snapshot';
+import { snapshotPage, readStatus, directoryStores } from '../src/lib/telstra/snapshot';
 import { available, changes, groupInventory, mergePages, RadiusGuard, sortStores, updateSnapshot } from '../src/shared/scan';
 import { DEFAULT_LOCATION, type Stock, type Store } from '../src/shared/types';
 import { validatePage } from '../src/worker';
@@ -47,6 +47,7 @@ function fakeD1() {
         },
         async all<T>() {
           if (sql.startsWith('SELECT * FROM stores')) return { results: [...stores.values()] as T[] };
+          if (sql.startsWith('SELECT store_code, status FROM stock')) return { results: [...stock.values()].filter(r => r.status === 'available') as T[] };
           if (sql.startsWith('SELECT * FROM stock')) {
             const storePlaceholders = (sql.match(/store_code IN \(([^)]*)\)/)?.[1].split(',').length) ?? 0;
             const codes = args.slice(0, storePlaceholders) as string[], skus = args.slice(storePlaceholders) as string[];
@@ -275,6 +276,18 @@ describe('background indexer and nationwide snapshot', () => {
   });
   it('returns null (so the caller falls back to a live lookup) before the indexer has ever populated any store', async () => {
     expect(await snapshotPage(fakeD1(), { ...input, from: 0 })).toBeNull();
+  });
+  it('lists every indexed store with how many tracked SKUs are currently available at each', async () => {
+    const db = fakeD1();
+    const now = new Date().toISOString();
+    await seedStore(db, 'NEAR', DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon, now);
+    await seedStore(db, 'FAR', DEFAULT_LOCATION.lat + 10, DEFAULT_LOCATION.lon + 10, now);
+    await seedStock(db, 'NEAR', sku, 'available', now);
+    await seedStock(db, 'NEAR', '999', 'available', now);
+    await seedStock(db, 'FAR', sku, 'unavailable', now);
+    const directory = await directoryStores(db);
+    expect(directory.find(s => s.code === 'NEAR')?.variantsInStock).toBe(2);
+    expect(directory.find(s => s.code === 'FAR')?.variantsInStock).toBe(0);
   });
   it('reports indexing health for the last-updated badge', async () => {
     const empty = await readStatus(fakeD1());

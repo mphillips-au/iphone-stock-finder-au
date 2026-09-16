@@ -31,6 +31,19 @@ export async function snapshotPage(db: D1Database, input: PageInput): Promise<St
   return { stores: page, stock, from: input.from, nextFrom: page.length < input.size ? null : input.from + input.size, checkedAt, failedSkus: [], complete: true, snapshotAt };
 }
 
+export interface DirectoryStore extends Store { variantsInStock: number }
+
+/** Every store the indexer has ever recorded, with how many tracked SKUs are currently available at each — the dataset behind the Stores directory page. Distance is left null; callers compute it relative to their own search origin. */
+export async function directoryStores(db: D1Database): Promise<DirectoryStore[]> {
+  const [storesResult, stockResult] = await Promise.all([
+    db.prepare('SELECT * FROM stores').all<StoreRow>(),
+    db.prepare("SELECT store_code, status FROM stock WHERE status = 'available'").all<{ store_code: string; status: string }>(),
+  ]);
+  const counts = new Map<string, number>();
+  for (const row of stockResult.results) counts.set(row.store_code, (counts.get(row.store_code) ?? 0) + 1);
+  return storesResult.results.map(row => ({ ...toStore(row), variantsInStock: counts.get(row.code) ?? 0 }));
+}
+
 export async function readStatus(db: D1Database): Promise<SyncStatus> {
   const row = await db.prepare('SELECT COUNT(*) as count, MIN(updated_at) as oldest, MAX(updated_at) as latest FROM stores').first<{ count: number; oldest: string | null; latest: string | null }>();
   return { indexed: (row?.count ?? 0) > 0, storeCount: row?.count ?? 0, lastFullCycleAt: await readLastFullCycleAt(db), oldestUpdate: row?.oldest ?? null, latestUpdate: row?.latest ?? null };

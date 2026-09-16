@@ -4,7 +4,7 @@ import { context, upstream } from './lib/telstra/http';
 import { runIndexCycle } from './lib/telstra/indexer';
 import { normaliseGeo, object } from './lib/telstra/normalise';
 import { getProducts } from './lib/telstra/products';
-import { readStatus, snapshotPage } from './lib/telstra/snapshot';
+import { directoryStores, readStatus, snapshotPage } from './lib/telstra/snapshot';
 import { stockPage } from './lib/telstra/stock';
 import type { PageInput } from './shared/types';
 interface Env { ASSETS: Fetcher; DB?: D1Database; SKU_BATCH_SIZE?: string; DEBUG_UPSTREAM?: string }
@@ -51,6 +51,10 @@ export default {
           if (snapshot.checkedAt) return json(snapshot);
         }
         return json(await cached(`stock-v1:${JSON.stringify(input)}`, 20, () => stockPage(input, Number(env.SKU_BATCH_SIZE) || 6, context(env.DEBUG_UPSTREAM === 'true')), cache, value => value.complete));
+      }
+      if (url.pathname === '/api/stores' && request.method === 'GET') {
+        if (!env.DB) return json([]);
+        return json(await cached('stores-v1', 60, () => directoryStores(env.DB!), cache));
       }
       if (url.pathname === '/api/status' && request.method === 'GET') {
         if (!env.DB) return json({ indexed: false, storeCount: 0, lastFullCycleAt: null, oldestUpdate: null, latestUpdate: null });

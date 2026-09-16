@@ -10,6 +10,7 @@ export interface Store {
   state: string; phone?: string; latitude: number | null; longitude: number | null;
   distanceMetres: number | null; hours: Record<string, string>;
 }
+export interface DirectoryStore extends Store { variantsInStock: number }
 export interface Stock { storeCode: string; sku: string; status: string; usageType: string }
 export interface Location { label: string; suburb?: string; postcode?: string; state?: string; lat: number; lon: number }
 export interface PageInput { lat: number; lon: number; skus: string[]; from: number; size: 10 }
