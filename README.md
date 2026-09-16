@@ -2,6 +2,8 @@
 
 A personal, unofficial iPhone launch-day utility: find matching configurations at nearby Telstra stores and inspect a specific store's tracked inventory. React, Vite and strict TypeScript, served by one Cloudflare Worker with static assets. No accounts or database.
 
+Production: https://iphone-stock-finder-au.mphillips-au.workers.dev
+
 ## Run locally
 
 Use Node 22.12+ or a compatible newer release.
@@ -87,7 +89,7 @@ npx wrangler login
 npm run deploy
 ```
 
-`wrangler.jsonc` includes the Worker entry, static asset binding, SPA fallback and `/api/*` Worker-first routing. No secrets are currently required. Deployment has not been performed automatically. Cloudflare's [static assets documentation](https://developers.cloudflare.com/workers/static-assets/) describes this single-project setup.
+`wrangler.jsonc` includes the Worker entry, static asset binding, SPA fallback and `/api/*` Worker-first routing. No secrets are currently required. Production was deployed with Wrangler on 2026-09-16; GitHub automatic deployments are not configured. Cloudflare's [static assets documentation](https://developers.cloudflare.com/workers/static-assets/) describes this single-project setup.
 
 ## Known practical limits
 

@@ -1,6 +1,10 @@
 import { FALLBACK_PRODUCTS, PRODUCT_PAGES } from '../../data/products';
 import type { Catalogue, Model, ProductVariant } from '../../shared/types';
 import { array, object, string } from './normalise';
+// Telstra's product pages (unlike its stock/geo JSON APIs) reject requests with no
+// User-Agent header with a 403 — workerd's default fetch sends none. A plain,
+// self-identifying UA is enough; no need to impersonate a browser.
+const PRODUCT_PAGE_USER_AGENT = 'iphone-stock-finder-au/1.0 (+https://iphone-stock-finder-au.mphillips-au.workers.dev)';
 export function decodeEntities(value: string): string {
   return value.replace(/&(?:quot|apos|amp|lt|gt|#\d+|#x[\da-f]+);/gi, entity => {
     const named: Record<string, string> = { '&quot;': '"', '&apos;': "'", '&amp;': '&', '&lt;': '<', '&gt;': '>' };
@@ -68,7 +72,10 @@ export async function getProducts(fetcher: typeof fetch = fetch, debug = false):
   let discoveredCount = 0;
   for (const [model, url] of Object.entries(PRODUCT_PAGES)) {
     try {
-      const response = await fetcher(url, { signal: AbortSignal.timeout(8000), redirect: 'follow' });
+      const response = await fetcher(url, {
+        signal: AbortSignal.timeout(8000), redirect: 'follow',
+        headers: { 'User-Agent': PRODUCT_PAGE_USER_AGENT, Accept: 'text/html,application/xhtml+xml' },
+      });
       if (!response.ok) { if (debug) console.warn(JSON.stringify({ event: 'Telstra product page failed', model, status: response.status })); await response.body?.cancel(); continue; }
       const html = await response.text();
       const discovered = parseProducts(html, model as Model, url);
