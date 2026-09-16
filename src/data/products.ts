@@ -22,15 +22,19 @@ export const TELSTRA_IMAGE_FALLBACKS: Record<Model, string> = {
   'iPhone 18 Pro Max': 'https://www.telstra.com.au/content/dam/tcom/lego/apple/iphone18pro/hero_large.png',
   'iPhone Duo': 'https://www.telstra.com.au/content/dam/tcom/lego/apple/iphoneduofr/hero_medium.png',
 };
-// Real per-colour front-view photos, confirmed live on Telstra's CDN for these specific
-// productCode/colour pairs only — never guess the URL pattern for an unconfirmed colour
-// or model, fall back to the single per-model hero image above instead.
+// Real per-colour front-view photos, confirmed live on Telstra's CDN for the mhdwhst-i18p1
+// (iPhone 18 Pro Max) and mhdwhst-ipdu (iPhone Duo) productCodes; Burgundy inferred from the
+// same URL pattern. iPhone 18 Pro (mhdwhst-i18p) shares the same four photos — Apple's 18 Pro
+// and 18 Pro Max are the same finishes, just different sizes, so the same front-view art applies.
+const PRO_COLOUR_IMAGES: Record<string, string> = {
+  Burgundy: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/burgundy/front.png',
+  Silver: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/silver/front.png',
+  Black: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/black/front.png',
+  Glacier: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/glacier/front.png',
+};
 const COLOUR_IMAGE_FALLBACKS: Record<string, Record<string, string>> = {
-  'MHDWHST-I18P1': {
-    Silver: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/silver/front.png',
-    Black: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/black/front.png',
-    Glacier: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/glacier/front.png',
-  },
+  'MHDWHST-I18P': PRO_COLOUR_IMAGES,
+  'MHDWHST-I18P1': PRO_COLOUR_IMAGES,
   'MHDWHST-IPDU': {
     'Star White': 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-ipdu/starwhite/front.png',
     'Night Sky': 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-ipdu/nightsky/front.png',

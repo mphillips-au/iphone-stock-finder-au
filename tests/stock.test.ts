@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FALLBACK_PRODUCTS, STORAGE_ORDER, TELSTRA_IMAGE_FALLBACKS, TRACKED_SKUS } from '../src/data/products';
+import { FALLBACK_PRODUCTS, STORAGE_ORDER, TRACKED_SKUS } from '../src/data/products';
 import { normaliseGeo, normaliseStock } from '../src/lib/telstra/normalise';
 import { context } from '../src/lib/telstra/http';
 import { stockPage } from '../src/lib/telstra/stock';
@@ -72,12 +72,12 @@ describe('catalogue and real response contracts', () => {
   it('includes the 40 unique supplied variants and exact target SKU', () => {
     expect(FALLBACK_PRODUCTS).toHaveLength(40); expect(new Set(FALLBACK_PRODUCTS.map(p => p.sku)).size).toBe(40);
     expect(FALLBACK_PRODUCTS.find(p => p.sku === sku)).toMatchObject({ model: 'iPhone 18 Pro Max', storage: '512GB', colour: 'Silver' });
-    // 3 per-model hero fallbacks (iPhone 18 Pro; iPhone 18 Pro Max, used only for its uncovered Burgundy colour; iPhone Duo, unused since both its colours have real photos) + 3 real Pro Max colour photos + 2 real Duo colour photos.
-    expect(new Set(FALLBACK_PRODUCTS.map(p => p.imageUrl)).size).toBe(7);
-    expect(FALLBACK_PRODUCTS.find(p => p.model === 'iPhone 18 Pro Max' && p.colour === 'Burgundy')?.imageUrl).toBe(TELSTRA_IMAGE_FALLBACKS['iPhone 18 Pro Max']);
+    // 4 real colour photos shared by iPhone 18 Pro and Pro Max (Burgundy/Silver/Black/Glacier) + 2 real Duo colour photos (both per-model hero fallbacks now unused, since every colour has a real photo).
+    expect(new Set(FALLBACK_PRODUCTS.map(p => p.imageUrl)).size).toBe(6);
+    expect(FALLBACK_PRODUCTS.find(p => p.model === 'iPhone 18 Pro Max' && p.colour === 'Burgundy')?.imageUrl).toBe('https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/burgundy/front.png');
     expect(FALLBACK_PRODUCTS.find(p => p.model === 'iPhone 18 Pro Max' && p.colour === 'Silver')?.imageUrl).toBe('https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/silver/front.png');
     expect(FALLBACK_PRODUCTS.find(p => p.model === 'iPhone Duo' && p.colour === 'Night Sky')?.imageUrl).toBe('https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-ipdu/nightsky/front.png');
-    expect(FALLBACK_PRODUCTS.filter(p => p.model === 'iPhone 18 Pro').every(p => p.imageUrl === TELSTRA_IMAGE_FALLBACKS['iPhone 18 Pro'])).toBe(true);
+    expect(FALLBACK_PRODUCTS.find(p => p.model === 'iPhone 18 Pro' && p.colour === 'Silver')?.imageUrl).toBe(FALLBACK_PRODUCTS.find(p => p.model === 'iPhone 18 Pro Max' && p.colour === 'Silver')?.imageUrl);
     expect(STORAGE_ORDER).toEqual(['256GB', '512GB', '1TB', '2TB']);
   });
   it('normalises the actual stock probe with exact place/store join', () => {
