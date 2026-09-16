@@ -16,6 +16,11 @@ export interface PageInput { lat: number; lon: number; skus: string[]; from: num
 export interface StockPage {
   stores: Store[]; stock: Stock[]; from: number; nextFrom: number | null;
   checkedAt: string; failedSkus: string[]; complete: boolean; warning?: string;
+  /** When this page's underlying data was last confirmed against Telstra. Present for snapshot (D1-backed) pages. */
+  snapshotAt?: string;
+}
+export interface SyncStatus {
+  indexed: boolean; storeCount: number; lastFullCycleAt: string | null; oldestUpdate: string | null; latestUpdate: string | null;
 }
 export interface Catalogue { variants: ProductVariant[]; updatedAt: string; fallbackActive: boolean; discoveredCount: number }
 export interface Filters { model: string; storage: string[]; colour: string[]; radius: number; state: string; availableOnly: boolean }

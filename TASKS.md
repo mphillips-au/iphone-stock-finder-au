@@ -56,5 +56,11 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [x] Sound alerts.
 - [x] Dark mode.
 - [x] Public deployment authorized and verified 2026-09-16: https://iphone-stock-finder-au.mphillips-au.workers.dev (live scan and desktop/mobile smoke checks).
+- [x] Background nationwide indexer (Cloudflare Cron Trigger + D1) so visitor traffic reads a shared snapshot instead of calling Telstra live; staggered cursor, tracked-SKUs-only. `/api/stock/page` falls back to live Telstra only before the first cron cycle populates D1.
+- [x] "Last updated" badge (`/api/status`, polled client-side, never hits Telstra).
+- [x] Free store map (Leaflet + OpenStreetMap tiles, lazy-loaded) on the Find results.
+- [x] Real Cloudflare D1 database created and migrated 2026-09-16 (`iphone-stock-finder-au-db`, region OC, id `df44669c-d450-4234-9334-045ae74e7629`, wired into `wrangler.jsonc`; schema applied with `--remote`).
+- [ ] Verify the cron trigger actually fires on Cloudflare's schedule in production (only exercised locally via the manual `/cdn-cgi/local/scheduled` trigger this session — see HANDOFF.md).
+- [ ] Optional: delete/retire D1 store rows Telstra no longer returns (indexer currently only upserts, never removes a closed store).
 - [x] Verified live against real telstra.com.au (2026-09-16): Telstra's product-page JSON does carry a genuine multi-image gallery, distinct per colour. Found and fixed a real bug in the process — Telstra 403s the product-page fetch when no User-Agent is sent, so production was silently stuck on the fallback catalogue; see HANDOFF.md.
 
