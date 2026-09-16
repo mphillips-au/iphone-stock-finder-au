@@ -51,6 +51,7 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [ ] Device QA: actual notification delivery, geolocation permission paths and timed hidden-tab refresh (implemented, not manually exercised).
 - [ ] Verify a real available-stock result when launch-day stock exists (fixture behavior tested).
 - [x] Pull Telstra product images into the Products screen with safe fallback behavior.
+- [x] Products screen: fix Telstra fidelity (drop range link, dedupe colour pickers, real photo gallery, drop SKU listing), live "N of 10 nearest stores" badge, image skeleton/fade-in.
 - [x] Multi-select colours/storage in the main filter (scans every selected combination at once).
 - [x] Sound alerts.
 - [x] Dark mode.

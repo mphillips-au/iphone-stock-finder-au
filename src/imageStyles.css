@@ -14,10 +14,18 @@
 .tel-clock{font-size:19px;color:var(--green)}
 .tel-launch strong{font-size:14px;display:block;color:var(--text)}
 .tel-launch p{font-size:12px;color:var(--muted);margin-top:4px}
+.tel-nearby{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted-2);margin:0 0 14px;padding:2px 0}
+.tel-nearby::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--muted-2);flex:none}
+.tel-nearby.has-stock{color:var(--green)}
+.tel-nearby.has-stock::before{background:var(--green)}
 .tel-cta{width:100%}
 .tel-visual{position:relative;min-height:280px}
-.tel-photo{background:#fff;border-radius:20px;padding:20px}
+.tel-photo{background:#fff;border-radius:20px;padding:20px;position:relative}
 .tel-visual img{width:100%;max-width:400px;aspect-ratio:1/1;object-fit:contain;display:block;margin:0 auto}
+.tel-photo img{opacity:0;transition:opacity .25s ease}
+.tel-photo img.loaded{opacity:1}
+.tel-skeleton{position:absolute;inset:20px;border-radius:12px;background:linear-gradient(100deg,var(--surface-alt) 30%,var(--line) 45%,var(--surface-alt) 60%);background-size:250% 100%;animation:tel-shimmer 1.3s ease infinite}
+@keyframes tel-shimmer{0%{background-position:120% 0}100%{background-position:-20% 0}}
 .tel-visual-empty{aspect-ratio:1/1;max-width:360px;margin:0 auto;border-radius:10px;background:var(--surface-alt);display:flex;align-items:center;justify-content:center}
 .tel-visual-empty span{font:700 54px Manrope,sans-serif;letter-spacing:-6px;color:var(--placeholder)}
 .tel-thumbs{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
