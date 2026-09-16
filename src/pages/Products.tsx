@@ -45,7 +45,7 @@ function ModelCard({ model, index, products, onCheck }: { model: string; index: 
       </details>
     </div>
     <div className="tel-visual">
-      {selected.imageUrl && imageOk ? <img src={selected.imageUrl} alt={`${model} in ${colour}`} loading="lazy" decoding="async" onError={() => setImageOk(false)}/> : <div className="tel-visual-empty" aria-hidden="true"><span>{model === 'iPhone Duo' ? 'D' : '18'}</span></div>}
+      <div className="tel-photo">{selected.imageUrl && imageOk ? <img src={selected.imageUrl} alt={`${model} in ${colour}`} loading="lazy" decoding="async" onError={() => setImageOk(false)}/> : <div className="tel-visual-empty" aria-hidden="true"><span>{model === 'iPhone Duo' ? 'D' : '18'}</span></div>}</div>
       <div className="tel-thumbs" role="group" aria-label="Colour thumbnails">
         {colours.map(c => { const sw = COLOUR_SWATCHES[c] ?? { fill: '#ccc' }; return <button key={c} type="button" className={`tel-thumb${c === colour ? ' active' : ''}`} aria-label={`View ${c}`} onClick={() => setColour(c)}><span style={{ background: sw.fill, borderColor: sw.border ?? sw.fill }}/></button>; })}
       </div>

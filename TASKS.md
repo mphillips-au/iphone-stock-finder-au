@@ -53,6 +53,6 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [x] Pull Telstra product images into the Products screen with safe fallback behavior.
 - [ ] Multi-target selection beyond saved presets.
 - [x] Sound alerts.
-- [ ] Dark mode.
+- [x] Dark mode.
 - [ ] Public deployment (requires user authorization and Cloudflare login).
 
