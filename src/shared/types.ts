@@ -2,7 +2,7 @@ export type Model = 'iPhone 18 Pro' | 'iPhone 18 Pro Max' | 'iPhone Duo';
 export interface ProductVariant {
   model: Model; storage: string; colour: string; sku: string; productCode: string;
   deviceName: string; marketLaunchDate: string; telstraLaunchDate?: string;
-  imageUrl?: string; merchandisingStatus?: string; merchandisingMessage?: string;
+  imageUrl?: string; images?: string[]; merchandisingStatus?: string; merchandisingMessage?: string;
   source: 'fallback' | 'discovered';
 }
 export interface Store {

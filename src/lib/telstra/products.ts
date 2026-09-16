@@ -17,14 +17,19 @@ function resolveImageUrl(value: unknown, baseUrl?: string): string | undefined {
     return url.protocol === 'https:' ? url.href : undefined;
   } catch { return undefined; }
 }
-function firstImage(value: unknown, baseUrl?: string): string | undefined {
-  if (Array.isArray(value)) {
-    for (const item of value) { const result = firstImage(item, baseUrl); if (result) return result; }
-    return undefined;
-  }
-  if (typeof value === 'string') return resolveImageUrl(value, baseUrl);
-  const v = object(value);
-  return resolveImageUrl(v.url ?? v.src ?? v.href ?? v.uri ?? v.imageUrl ?? v.image, baseUrl);
+// Every distinct photo for one variant (colour+storage), not just the hero shot, so the
+// Products screen can show a real thumbnail gallery instead of a single static image.
+function allImages(value: unknown, baseUrl?: string, limit = 8): string[] {
+  const seen = new Set<string>();
+  const visit = (node: unknown) => {
+    if (seen.size >= limit) return;
+    if (Array.isArray(node)) { for (const item of node) visit(item); return; }
+    if (typeof node === 'string') { const resolved = resolveImageUrl(node, baseUrl); if (resolved) seen.add(resolved); return; }
+    const v = object(node), single = resolveImageUrl(v.url ?? v.src ?? v.href ?? v.uri ?? v.imageUrl ?? v.image, baseUrl);
+    if (single) seen.add(single);
+  };
+  visit(value);
+  return [...seen].slice(0, limit);
 }
 function pageImage(html: string, baseUrl?: string): string | undefined {
   const candidates = [
@@ -48,10 +53,11 @@ export function parseProducts(html: string, model: Model, baseUrl?: string): Pro
         const v = object(raw), sku = string(v.sku);
         if (!/^\d{9}$/.test(sku) || !string(v.colour) || !string(v.storage)) continue;
         const fallback = FALLBACK_PRODUCTS.find(p => p.sku === sku) ?? FALLBACK_PRODUCTS.find(p => p.model === model)!;
-        const candidate = firstImage(v.images ?? v.image ?? v.imageUrl, baseUrl) ?? fallbackImage;
+        const gallery = allImages(v.images ?? v.image ?? v.imageUrl, baseUrl);
+        const candidate = gallery[0] ?? fallbackImage;
         found.set(sku, { ...fallback, model, sku, colour: string(v.colour), storage: string(v.storage), deviceName: string(v.deviceName) || model,
           merchandisingStatus: string(v.merchandisingStatus), merchandisingMessage: string(v.merchandisingMessage),
-          imageUrl: candidate, source: 'discovered' });
+          imageUrl: candidate, images: gallery.length ? gallery : candidate ? [candidate] : [], source: 'discovered' });
       }
     } catch { /* One malformed node must not disable the catalogue. */ }
   }
