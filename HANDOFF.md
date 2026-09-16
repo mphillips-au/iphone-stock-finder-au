@@ -1,9 +1,14 @@
 # Current handoff
 
-Updated 2026-09-16, approximately 16:55 Australia/Sydney.
+Updated 2026-09-16, approximately 17:20 Australia/Sydney.
 
 ## Status
 First complete implementation built. Phases 0–6 implemented, with automated regression checks and live browser smoke tests passing. No public deployment. See TASKS.md for optional follow-ups. Do not rebuild from scratch.
+
+## Session update — Products page redesign
+Rebuilt the Products screen (`src/pages/Products.tsx`, `src/imageStyles.css`, `src/data/products.ts`) to closely match the Telstra iPhone 18 Pro/Pro Max/Duo product-page layouts supplied in `docs/*Layout.png`: a bordered left card (Apple/model name, "iPhone 18 range" pill linking to the live Telstra product page, colour swatch circles, capacity pill buttons, a launch/availability info box, a primary CTA) beside a right-hand device image with colour thumbnails and a page number, per model. The colour swatches and capacity buttons are interactive (switch the shown SKU/image); the CTA ("Check stock near me") sets Home filters to that exact model/storage/colour and runs a live scan — this is new functional wiring in `App.tsx` (`onCheck` prop), not just visual. Colour hex values added as `COLOUR_SWATCHES` in `src/data/products.ts` (approximate, cosmetic only). Removed the old `.product-*` CSS rules (unused after the rewrite) and replaced `imageStyles.css` with new `.tel-*` rules including a `900px`/`600px` responsive stack matching the rest of the app's breakpoints.
+Images use the existing Telstra `imageUrl` per variant with a graceful onError fallback to the original placeholder box (tested by simulating a network-blocked image load); real Telstra hotlinked images were not re-verified live this session (no outbound network in this container) — the underlying `imageUrl` plumbing was already verified working in an earlier session per the entries below.
+Verified this session: `npm run check`, `npm test` (25 passed), `npm run build`, `npm run deploy:check` all pass. Visual check done via a local Vite dev server + headless Chromium screenshots at desktop (1400px) and mobile (390px) widths — layout, swatch/capacity interaction and responsive stacking confirmed; device images render as the placeholder box in this sandboxed check since outbound network is unavailable here.
 
 ## Verified
 - Type check passed (also included in build).

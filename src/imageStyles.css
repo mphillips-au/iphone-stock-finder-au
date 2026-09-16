@@ -1,5 +1,32 @@
-.product-content{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:30px;align-items:start}
-.product-visual{aspect-ratio:1/1;border-radius:10px;background:#f0f3f8;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.product-visual img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
-.product-visual-empty span{font:700 54px Manrope,sans-serif;letter-spacing:-6px;color:#c4ccdc}
-@media(max-width:600px){.product-content{grid-template-columns:1fr;gap:18px}.product-visual{max-width:180px}}
+.tel-card{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:48px;align-items:start;border-bottom:1px solid var(--line);padding:48px 0}
+.tel-panel{border:1px solid var(--line);border-radius:24px;padding:32px 30px;background:#fefeff}
+.tel-brand{font-size:15px;color:var(--muted);margin:0}
+.tel-title{font-size:clamp(26px,3vw,34px);font-weight:700;letter-spacing:-.03em;margin:2px 0 18px}
+.tel-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--blue);color:var(--blue);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;margin-bottom:26px}
+.tel-pill:hover{background:#eef2fc}
+.tel-field{margin-bottom:22px}
+.tel-label{display:block;font-size:14px;font-weight:600;margin-bottom:12px}
+.tel-label strong{font-weight:400}
+.tel-swatches{display:flex;gap:12px}
+.tel-swatch{width:32px;height:32px;border-radius:50%;border:1px solid #0002;padding:0}
+.tel-capacity{display:flex;flex-wrap:wrap;gap:10px}
+.tel-cap{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:13px;font-weight:600;color:#20232b}
+.tel-cap.active{border-color:var(--blue);color:var(--blue)}
+.tel-launch{display:flex;gap:14px;align-items:flex-start;background:#f5f6f9;border-radius:12px;padding:16px 18px;margin:6px 0 22px}
+.tel-clock{font-size:19px;color:var(--green)}
+.tel-launch strong{font-size:14px;display:block}
+.tel-launch p{font-size:12px;color:var(--muted);margin-top:4px}
+.tel-cta{width:100%;margin-bottom:8px}
+.tel-panel details{margin-top:10px;font-size:13px}
+.tel-panel summary{cursor:pointer;padding:12px 0;min-height:44px;color:var(--blue)}
+.tel-visual{position:relative;min-height:280px}
+.tel-visual img{width:100%;max-width:440px;aspect-ratio:1/1;object-fit:contain;display:block;margin:0 auto;mix-blend-mode:multiply}
+.tel-visual-empty{aspect-ratio:1/1;max-width:360px;margin:0 auto;border-radius:10px;background:#f0f3f8;display:flex;align-items:center;justify-content:center}
+.tel-visual-empty span{font:700 54px Manrope,sans-serif;letter-spacing:-6px;color:#c4ccdc}
+.tel-thumbs{display:flex;gap:10px;justify-content:center;margin-top:18px}
+.tel-thumb{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;padding:0}
+.tel-thumb.active{border-color:var(--blue)}
+.tel-thumb span{width:20px;height:20px;border-radius:50%;border:1px solid #0002;display:block}
+.tel-number{position:absolute;top:0;right:0;font-size:36px;color:#c4ccdc;font-family:Manrope,sans-serif;letter-spacing:-2px}
+@media(max-width:900px){.tel-card{grid-template-columns:1fr;gap:28px}.tel-visual{order:-1}.tel-number{display:none}}
+@media(max-width:600px){.tel-card{padding:30px 0}.tel-panel{padding:24px 20px;border-radius:16px}.tel-title{font-size:25px}}

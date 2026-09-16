@@ -1,6 +1,15 @@
 import type { Model, ProductVariant } from '../shared/types';
 export const STORAGE_ORDER = ['256GB', '512GB', '1TB', '2TB'];
 export const MODELS: Model[] = ['iPhone 18 Pro', 'iPhone 18 Pro Max', 'iPhone Duo'];
+// Approximate swatch colours for the on-brand colour pickers on the Products screen.
+export const COLOUR_SWATCHES: Record<string, { fill: string; border?: string }> = {
+  Burgundy: { fill: '#5c2333' },
+  Silver: { fill: '#eef0f2', border: '#c9d0da' },
+  Black: { fill: '#2b2b2d' },
+  Glacier: { fill: '#d7e3ec', border: '#c2d2df' },
+  'Night Sky': { fill: '#23262e' },
+  'Star White': { fill: '#f3ede0', border: '#ded5c2' },
+};
 export const PRODUCT_PAGES: Record<Model, string> = {
   'iPhone 18 Pro': 'https://www.telstra.com.au/mobile-phones/mobiles-on-a-plan/apple/iphone-18-pro',
   'iPhone 18 Pro Max': 'https://www.telstra.com.au/mobile-phones/mobiles-on-a-plan/apple/iphone-18-pro-max',
