@@ -22,6 +22,20 @@ export const TELSTRA_IMAGE_FALLBACKS: Record<Model, string> = {
   'iPhone 18 Pro Max': 'https://www.telstra.com.au/content/dam/tcom/lego/apple/iphone18pro/hero_large.png',
   'iPhone Duo': 'https://www.telstra.com.au/content/dam/tcom/lego/apple/iphoneduofr/hero_medium.png',
 };
+// Real per-colour front-view photos, confirmed live on Telstra's CDN for these specific
+// productCode/colour pairs only — never guess the URL pattern for an unconfirmed colour
+// or model, fall back to the single per-model hero image above instead.
+const COLOUR_IMAGE_FALLBACKS: Record<string, Record<string, string>> = {
+  'MHDWHST-I18P1': {
+    Silver: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/silver/front.png',
+    Black: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/black/front.png',
+    Glacier: 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-i18p1/glacier/front.png',
+  },
+  'MHDWHST-IPDU': {
+    'Star White': 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-ipdu/starwhite/front.png',
+    'Night Sky': 'https://www.telstra.com.au/content/dam/tcom/devices/mobile/mhdwhst-ipdu/nightsky/front.png',
+  },
+};
 const rows: [Model, string, string[], string[][]][] = [
   ['iPhone 18 Pro', 'MHDWHST-I18P', ['Burgundy', 'Silver', 'Black', 'Glacier'], [
     ['100257229', '100256788', '100256787', '100256786'],
@@ -41,12 +55,16 @@ const rows: [Model, string, string[], string[][]][] = [
   ]],
 ];
 export const FALLBACK_PRODUCTS: ProductVariant[] = rows.flatMap(([model, productCode, colours, skus]) =>
-  skus.flatMap((row, i) => row.map((sku, j) => ({
-    model, productCode, storage: STORAGE_ORDER[i], colour: colours[j], sku,
-    deviceName: model, imageUrl: TELSTRA_IMAGE_FALLBACKS[model], images: [TELSTRA_IMAGE_FALLBACKS[model]], source: 'fallback' as const,
-    marketLaunchDate: model === 'iPhone Duo' ? '2026-10-23T08:00:00+11:00' : '2026-09-18T08:00:00+10:00',
-    telstraLaunchDate: model === 'iPhone Duo' ? '2026-10-16T23:00:00+11:00' : '2026-09-12T21:09:00+10:00',
-  }))),
+  skus.flatMap((row, i) => row.map((sku, j) => {
+    const colour = colours[j];
+    const image = COLOUR_IMAGE_FALLBACKS[productCode]?.[colour] ?? TELSTRA_IMAGE_FALLBACKS[model];
+    return {
+      model, productCode, storage: STORAGE_ORDER[i], colour, sku,
+      deviceName: model, imageUrl: image, images: [image], source: 'fallback' as const,
+      marketLaunchDate: model === 'iPhone Duo' ? '2026-10-23T08:00:00+11:00' : '2026-09-18T08:00:00+10:00',
+      telstraLaunchDate: model === 'iPhone Duo' ? '2026-10-16T23:00:00+11:00' : '2026-09-12T21:09:00+10:00',
+    };
+  })),
 );
 // The fixed set of SKUs this app tracks. The background indexer only ever queries
 // Telstra for these — never an arbitrary/open-ended SKU list — so nationwide indexing
