@@ -1,0 +1,5 @@
+---
+description: Shared project instructions and cross-assistant continuity
+alwaysApply: true
+---
+Read and follow AGENTS.md, HANDOFF.md, and TASKS.md at the repository root. Continue the first unfinished phase. Use the master prompt for scoped requirements. Update task completion and handoff after verified work; do not duplicate or restart completed work.
