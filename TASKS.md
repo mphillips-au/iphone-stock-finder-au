@@ -63,4 +63,5 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [ ] Verify the cron trigger actually fires on Cloudflare's schedule in production (only exercised locally via the manual `/cdn-cgi/local/scheduled` trigger this session — see HANDOFF.md).
 - [ ] Optional: delete/retire D1 store rows Telstra no longer returns (indexer currently only upserts, never removes a closed store).
 - [x] Verified live against real telstra.com.au (2026-09-16): Telstra's product-page JSON does carry a genuine multi-image gallery, distinct per colour. Found and fixed a real bug in the process — Telstra 403s the product-page fetch when no User-Agent is sent, so production was silently stuck on the fallback catalogue; see HANDOFF.md.
+- [x] Stores page redesigned to match user-supplied Telstra-store-directory mockup: full nationwide store directory (new `/api/stores` endpoint reading D1), search/state/open-now/has-stock filters, paginated list + detail panel + map. Real logo (user-supplied) now used for header brand mark and favicons.
 
