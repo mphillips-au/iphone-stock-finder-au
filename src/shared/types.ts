@@ -18,6 +18,6 @@ export interface StockPage {
   checkedAt: string; failedSkus: string[]; complete: boolean; warning?: string;
 }
 export interface Catalogue { variants: ProductVariant[]; updatedAt: string; fallbackActive: boolean; discoveredCount: number }
-export interface Filters { model: string; storage: string; colour: string; radius: number; state: string; availableOnly: boolean }
+export interface Filters { model: string; storage: string[]; colour: string[]; radius: number; state: string; availableOnly: boolean }
 export const DEFAULT_LOCATION: Location = { label: 'Port Melbourne VIC 3207', suburb: 'Port Melbourne', state: 'VIC', postcode: '3207', lat: -37.83801318, lon: 144.93842178 };
-export const DEFAULT_FILTERS: Filters = { model: 'iPhone 18 Pro Max', storage: '', colour: '', radius: 50, state: '', availableOnly: true };
+export const DEFAULT_FILTERS: Filters = { model: 'iPhone 18 Pro Max', storage: [], colour: [], radius: 50, state: '', availableOnly: true };
