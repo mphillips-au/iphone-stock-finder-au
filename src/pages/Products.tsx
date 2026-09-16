@@ -38,7 +38,7 @@ function ModelCard({ model, index, products, onCheck }: { model: string; index: 
           <p>{launched ? 'Available now — ' : 'Launches '}{launch.toLocaleString('en-AU', { timeZone: tz, day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' })} {tzLabel}</p>
         </div>
       </div>
-      <button className="button primary tel-cta" onClick={() => onCheck({ model, storage, colour })}>Check stock near me <span aria-hidden="true">→</span></button>
+      <button className="button primary tel-cta" onClick={() => onCheck({ model, storage: [storage], colour: [colour] })}>Check stock near me <span aria-hidden="true">→</span></button>
       <details>
         <summary>Explore all configurations and SKUs</summary>
         {storages.map(s => <div className="catalogue-storage" key={s}><h3>{s}</h3>{products.filter(p => p.storage === s).map(p => <div className="catalogue-row" key={p.sku}><span>{p.colour}</span><small>{p.sku} · {p.productCode} · {p.source}</small></div>)}</div>)}

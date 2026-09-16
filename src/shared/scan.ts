@@ -2,7 +2,7 @@ import type { Filters, Location, ProductVariant, Stock, StockPage, Store } from 
 export const stockKey = (s: Stock) => `${s.storeCode}:${s.sku}`;
 export const available = (s: Stock | undefined) => s?.status === 'available';
 export function matchingProducts(products: ProductVariant[], filters: Filters): ProductVariant[] {
-  return products.filter(p => (!filters.model || p.model === filters.model) && (!filters.storage || p.storage === filters.storage) && (!filters.colour || p.colour === filters.colour));
+  return products.filter(p => (!filters.model || p.model === filters.model) && (!filters.storage.length || filters.storage.includes(p.storage)) && (!filters.colour.length || filters.colour.includes(p.colour)));
 }
 export function distance(a: Location, s: Store): number | null {
   if (s.latitude === null || s.longitude === null) return null;
