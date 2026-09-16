@@ -144,6 +144,13 @@ describe('metadata and coalescing', () => {
     const result = await getProducts(async (_url, init) => { expect(init?.redirect).toBe('follow'); return new Response('<meta content="https://images.telstra.com.au/iphone.webp" property="og:image">', { status: 200 }); });
     expect(result.variants.filter(p => p.imageUrl)).toHaveLength(40);
   });
+  it('sends a non-empty User-Agent on product-page requests (Telstra 403s requests with none)', async () => {
+    await getProducts(async (_url, init) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.get('User-Agent')).toBeTruthy();
+      return new Response('', { status: 200 });
+    });
+  });
   it('applies a Telstra page image to fallback variants when variant JSON is absent', async () => {
     const result = await getProducts(async () => new Response('<img alt="iPhone device" src="https://images.telstra.com.au/iphone-device.webp">', { status: 200 }));
     expect(result.variants.filter(p => p.imageUrl)).toHaveLength(40);
