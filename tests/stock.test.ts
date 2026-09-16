@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FALLBACK_PRODUCTS, STORAGE_ORDER, TELSTRA_IMAGE_FALLBACKS } from '../src/data/products';
+import { FALLBACK_PRODUCTS, STORAGE_ORDER, TELSTRA_IMAGE_FALLBACKS, TRACKED_SKUS } from '../src/data/products';
 import { normaliseGeo, normaliseStock } from '../src/lib/telstra/normalise';
 import { context } from '../src/lib/telstra/http';
 import { stockPage } from '../src/lib/telstra/stock';
 import { getProducts, parseProducts } from '../src/lib/telstra/products';
+import { runIndexCycle, readLastFullCycleAt } from '../src/lib/telstra/indexer';
+import { snapshotPage, readStatus } from '../src/lib/telstra/snapshot';
 import { available, changes, groupInventory, mergePages, RadiusGuard, sortStores, updateSnapshot } from '../src/shared/scan';
 import { DEFAULT_LOCATION, type Stock, type Store } from '../src/shared/types';
 import { validatePage } from '../src/worker';
@@ -11,6 +13,53 @@ import { cached } from '../src/lib/telstra/cache';
 import { hoursToday } from '../src/shared/hours';
 import realStock from '../docs/stock-probe.json';
 import realGeo from '../docs/geo-probe.json';
+// Minimal in-memory D1 fake: recognises exactly the statements indexer.ts/snapshot.ts issue.
+function fakeD1() {
+  const stores = new Map<string, Record<string, unknown>>();
+  const stock = new Map<string, Record<string, unknown>>();
+  const sync = new Map<string, string>();
+  function prepare(sql: string) {
+    function bind(...args: unknown[]) {
+      return {
+        async run() {
+          if (sql.startsWith('INSERT INTO stores')) {
+            const [code, name, address, suburb, postcode, state, phone, latitude, longitude, hours, updated_at] = args;
+            stores.set(code as string, { code, name, address, suburb, postcode, state, phone, latitude, longitude, hours, updated_at });
+          } else if (sql.startsWith('INSERT INTO stock')) {
+            const [store_code, sku, status, usage_type, updated_at] = args;
+            stock.set(`${store_code}:${sku}`, { store_code, sku, status, usage_type, updated_at });
+          } else if (sql.startsWith('INSERT INTO sync_state')) {
+            const [key, value] = args as [string, string];
+            sync.set(key, value);
+          }
+          return {};
+        },
+        async first<T>() {
+          if (sql.startsWith('SELECT value FROM sync_state')) {
+            const [key] = args as [string];
+            return sync.has(key) ? ({ value: sync.get(key) } as T) : null;
+          }
+          if (sql.startsWith('SELECT COUNT(*)')) {
+            const updates = [...stores.values()].map(s => s.updated_at as string).sort();
+            return { count: stores.size, oldest: updates[0] ?? null, latest: updates[updates.length - 1] ?? null } as T;
+          }
+          return null;
+        },
+        async all<T>() {
+          if (sql.startsWith('SELECT * FROM stores')) return { results: [...stores.values()] as T[] };
+          if (sql.startsWith('SELECT * FROM stock')) {
+            const storePlaceholders = (sql.match(/store_code IN \(([^)]*)\)/)?.[1].split(',').length) ?? 0;
+            const codes = args.slice(0, storePlaceholders) as string[], skus = args.slice(storePlaceholders) as string[];
+            return { results: [...stock.values()].filter(r => codes.includes(r.store_code as string) && skus.includes(r.sku as string)) as T[] };
+          }
+          return { results: [] as T[] };
+        },
+      };
+    }
+    return { bind, ...bind() };
+  }
+  return { prepare } as unknown as D1Database;
+}
 const sku = '100256812';
 const input = { lat: DEFAULT_LOCATION.lat, lon: DEFAULT_LOCATION.lon, skus: [sku], from: 0, size: 10 as const };
 const store = (code = 'A', metres: number | null = 100): Store => ({ code, name: code, address: '', suburb: '', postcode: '', state: 'VIC', latitude: -37.8, longitude: 144.9, distanceMetres: metres, hours: {} });
@@ -160,5 +209,77 @@ describe('metadata and coalescing', () => {
     await Promise.all([cached('same', 20, loader), cached('same', 20, loader)]); expect(loader).toHaveBeenCalledTimes(1);
     await expect(cached('failure', 20, async () => { throw new Error('fail'); })).rejects.toThrow();
     expect(await cached('failure', 20, async () => 'recovered')).toBe('recovered');
+  });
+  it('rejects a well-formed but untracked SKU, restricting requests to our own catalogue', () => {
+    expect(() => validatePage({ ...input, skus: ['999999999'] })).toThrow();
+    expect(TRACKED_SKUS).toContain(sku);
+  });
+});
+function indexPage(from: number, skus: string[]) {
+  const count = from < 20 ? 10 : 0;
+  return {
+    data: {
+      storeDetails: Array.from({ length: count }, (_, i) => ({ storecode: `P${from}-${i}`, title: `Store ${from}-${i}`, distance: from * 1000 + i * 1000, latitude: -33 - i * 0.01, longitude: 151 + i * 0.01, state: 'NSW', suburb: 'Sydney', postcode: '2000' })),
+      checkProductStockItem: skus.flatMap(s => Array.from({ length: count }, (_, i) => ({ checkedProductStock: { place: { id: `P${from}-${i}` }, productStockStatusType: i === 0 ? 'available' : 'unavailable', productStockUsageType: 'other', stockedProduct: { productCharacteristic: [{ name: 'SKU Code Type', value: 'RIMS' }, { name: 'SKU', value: s }] } } }))),
+    },
+  };
+}
+const indexFetcher = vi.fn(async (_url: string, init?: RequestInit) => { const body = JSON.parse(String(init?.body)) as { from: number; products: string[] }; return Response.json(indexPage(body.from, body.products)); });
+async function seedStore(db: D1Database, code: string, lat: number, lon: number, updatedAt: string) {
+  await db.prepare('INSERT INTO stores (code,name,address,suburb,postcode,state,phone,latitude,longitude,hours,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').bind(code, code, '1 St', 'Sydney', '2000', 'NSW', null, lat, lon, '{}', updatedAt).run();
+}
+async function seedStock(db: D1Database, storeCode: string, skuValue: string, status: string, updatedAt: string) {
+  await db.prepare('INSERT INTO stock (store_code,sku,status,usage_type,updated_at) VALUES (?,?,?,?,?)').bind(storeCode, skuValue, status, 'other', updatedAt).run();
+}
+describe('background indexer and nationwide snapshot', () => {
+  it('enumerates a whole distance-ordered cycle in one budget-bounded run when the budget allows it', async () => {
+    indexFetcher.mockClear();
+    const db = fakeD1();
+    const ctx = { remaining: 40, debug: false, fetcher: indexFetcher as unknown as typeof fetch, pause: async () => {} };
+    const result = await runIndexCycle(db, ctx);
+    expect(result.cycleComplete).toBe(true);
+    expect(result.storesUpserted).toBe(20);
+    expect(result.nextFrom).toBe(0);
+    expect(await readLastFullCycleAt(db)).toBeTruthy();
+    const stored = await db.prepare('SELECT * FROM stores').all<{ code: string }>();
+    expect(stored.results).toHaveLength(20);
+  });
+  it('stops within its request budget and resumes from a persisted cursor on the next tick, instead of doing the whole country at once', async () => {
+    indexFetcher.mockClear();
+    const db = fakeD1();
+    const first = await runIndexCycle(db, { remaining: 10, debug: false, fetcher: indexFetcher as unknown as typeof fetch, pause: async () => {} });
+    expect(first.cycleComplete).toBe(false);
+    expect(first.nextFrom).toBeGreaterThan(0);
+    const second = await runIndexCycle(db, { remaining: 10, debug: false, fetcher: indexFetcher as unknown as typeof fetch, pause: async () => {} });
+    expect(second.cycleComplete).toBe(true);
+    expect(second.nextFrom).toBe(0);
+  });
+  it('serves a nearest-first snapshot page from D1 without calling Telstra, and reports honest staleness', async () => {
+    const db = fakeD1();
+    const now = new Date().toISOString();
+    await seedStore(db, 'NEAR', DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon, now);
+    await seedStore(db, 'FAR', DEFAULT_LOCATION.lat + 10, DEFAULT_LOCATION.lon + 10, now);
+    await seedStock(db, 'NEAR', sku, 'available', now);
+    await seedStock(db, 'FAR', sku, 'unavailable', now);
+    const page = await snapshotPage(db, { lat: DEFAULT_LOCATION.lat, lon: DEFAULT_LOCATION.lon, from: 0, size: 10, skus: [sku] });
+    expect(page?.stores.map(s => s.code)).toEqual(['NEAR', 'FAR']);
+    expect(page?.nextFrom).toBeNull();
+    expect(page?.complete).toBe(true);
+    expect(page?.snapshotAt).toBeTruthy();
+    expect(page?.stock.find(s => s.storeCode === 'NEAR')?.status).toBe('available');
+  });
+  it('returns null (so the caller falls back to a live lookup) before the indexer has ever populated any store', async () => {
+    expect(await snapshotPage(fakeD1(), { ...input, from: 0 })).toBeNull();
+  });
+  it('reports indexing health for the last-updated badge', async () => {
+    const empty = await readStatus(fakeD1());
+    expect(empty.indexed).toBe(false);
+    const db = fakeD1();
+    const now = new Date().toISOString();
+    await seedStore(db, 'A', DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon, now);
+    const status = await readStatus(db);
+    expect(status.indexed).toBe(true);
+    expect(status.storeCount).toBe(1);
+    expect(status.oldestUpdate).toBe(now);
   });
 });

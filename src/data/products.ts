@@ -48,3 +48,7 @@ export const FALLBACK_PRODUCTS: ProductVariant[] = rows.flatMap(([model, product
     telstraLaunchDate: model === 'iPhone Duo' ? '2026-10-16T23:00:00+11:00' : '2026-09-12T21:09:00+10:00',
   }))),
 );
+// The fixed set of SKUs this app tracks. The background indexer only ever queries
+// Telstra for these — never an arbitrary/open-ended SKU list — so nationwide indexing
+// stays bounded and predictable.
+export const TRACKED_SKUS: string[] = [...new Set(FALLBACK_PRODUCTS.map(p => p.sku))].sort();
