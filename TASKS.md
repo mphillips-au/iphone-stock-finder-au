@@ -52,6 +52,7 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [ ] Verify a real available-stock result when launch-day stock exists (fixture behavior tested).
 - [x] Pull Telstra product images into the Products screen with safe fallback behavior.
 - [ ] Multi-target selection beyond saved presets.
-- [ ] Sound alerts and dark mode.
+- [x] Sound alerts.
+- [x] Dark mode.
 - [ ] Public deployment (requires user authorization and Cloudflare login).
 

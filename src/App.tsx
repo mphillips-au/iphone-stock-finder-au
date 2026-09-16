@@ -16,6 +16,7 @@ const validFilters = (v: unknown) => !!v && typeof v === 'object' && ['model', '
 type Target = { id: string; filters: Filters; location: Location };
 export default function App() {
   const [page, setPage] = useState('find'), [selectedStore, setSelectedStore] = useState<Store>();
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => readLocal('theme', 'system', v => v === 'light' || v === 'dark' || v === 'system'));
   const [location, setLocation] = useState(() => readLocal('location', DEFAULT_LOCATION, validLocation));
   const [locationValid, setLocationValid] = useState(true);
   const [filters, setFilters] = useState(() => readLocal('filters', DEFAULT_FILTERS, validFilters));
@@ -24,12 +25,21 @@ export default function App() {
   const [favourites, setFavourites] = useState<string[]>(() => readLocal('favourites', [], v => Array.isArray(v) && v.every(s => typeof s === 'string')));
   const [targets, setTargets] = useState<Target[]>(() => readLocal('targets', [], v => Array.isArray(v) && v.every(t => t && typeof t.id === 'string' && validLocation(t.location) && validFilters(t.filters))));
   const [interval, setRefreshInterval] = useState(0), [notify, setNotify] = useState(() => readLocal('notify', false, v => typeof v === 'boolean'));
+  const [sound, setSound] = useState(() => readLocal('sound', false, v => typeof v === 'boolean'));
+  const audioContext = useRef<AudioContext | undefined>(undefined);
   const [changedOnly, setChangedOnly] = useState(false), [notice, setNotice] = useState('');
   const notified = useRef(new Set<string>());
+  const chimed = useRef(new Set<string>());
   function remember(p: StockPage) { setDirectory(previous => { const merged = [...new Map([...previous, ...p.stores].map(s => [s.code, s])).values()]; writeLocal('stores', merged); return merged; }); }
   const scan = useScan(remember);
   useEffect(() => { const abort = new AbortController(); void api<Catalogue>('/api/products', abort.signal).then(setCatalogue).catch(() => {}); return () => abort.abort(); }, []);
   useEffect(() => { writeLocal('location', location); writeLocal('filters', filters); }, [location, filters]);
+  useEffect(() => {
+    if (theme === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+  const effectiveDark = theme === 'dark' || (theme === 'system' && typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches);
+  function toggleTheme() { const next = effectiveDark ? 'light' : 'dark'; setTheme(next); writeLocal('theme', next); }
   useEffect(() => {
     const onVisibility = () => { if (document.hidden) scan.pause(); else scan.resume(); };
     document.addEventListener('visibilitychange', onVisibility);
@@ -48,8 +58,27 @@ export default function App() {
       if (record && product && store) { try { new Notification('New iPhone stock', { body: `${product.model} · ${product.storage} ${product.colour}\n${store.name}`, tag: key }); notified.current.add(key); } catch { setNotice('Notifications are unavailable in this browser. New stock is still highlighted here.'); } }
     }
   }, [scan.diff, scan.result, notify, catalogue]);
+  useEffect(() => {
+    if (!sound) return;
+    const newKeys = Object.keys(scan.diff).filter(k => scan.diff[k] === 'new' && !chimed.current.has(k));
+    if (!newKeys.length) return;
+    for (const key of newKeys) chimed.current.add(key);
+    try {
+      const ctx = audioContext.current ?? (audioContext.current = new AudioContext());
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.frequency.value = 880;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch { /* audio unavailable; visual highlighting still shows new stock */ }
+  }, [scan.diff, sound]);
   function check(nextFilters = filters, nextLocation = location) {
     notified.current.clear();
+    chimed.current.clear();
     const skus = matchingProducts(catalogue.variants, nextFilters).map(p => p.sku);
     if (skus.length) void scan.run({ location: nextLocation, skus, radius: nextFilters.radius });
   }
@@ -71,8 +100,8 @@ export default function App() {
   const modelProducts = catalogue.variants.filter(p => !filters.model || p.model === filters.model);
   const launch = modelProducts[0]?.marketLaunchDate;
   const days = launch ? Math.ceil((new Date(launch).getTime() - Date.now()) / 86400000) : 0;
-  return <><header className="site-header"><a href="#" className="brand" onClick={e => { e.preventDefault(); navigate('find'); }}><span className="brand-mark" aria-hidden="true">s<span>f</span></span>Stock Finder<span className="country">AU</span></a><nav aria-label="Main navigation">{[['find', 'Find stock'], ['stores', 'Stores'], ['products', 'Products']].map(([id, title]) => <button key={id} className={page === id && !selectedStore ? 'active' : ''} aria-current={page === id && !selectedStore ? 'page' : undefined} onClick={() => navigate(id)}>{title}</button>)}</nav><span className="header-note">A better way to find it.</span></header><main id="main"><Suspense fallback={<p className="empty" role="status">Loading…</p>}>
-    {selectedStore ? <Inventory key={selectedStore.code} store={selectedStore} products={catalogue.variants} onBack={() => setSelectedStore(undefined)} onPage={remember}/> : page === 'products' ? <Products catalogue={catalogue}/> : page === 'stores' ? <Stores stores={directory.map(s => ({ ...s, distanceMetres: distance(location, s) }))} favourites={favourites} toggleFavourite={toggleFavourite} onOpen={openStore}/> : <>
+  return <><header className="site-header"><a href="#" className="brand" onClick={e => { e.preventDefault(); navigate('find'); }}><span className="brand-mark" aria-hidden="true">s<span>f</span></span>Stock Finder<span className="country">AU</span></a><nav aria-label="Main navigation">{[['find', 'Find stock'], ['stores', 'Stores'], ['products', 'Products']].map(([id, title]) => <button key={id} className={page === id && !selectedStore ? 'active' : ''} aria-current={page === id && !selectedStore ? 'page' : undefined} onClick={() => navigate(id)}>{title}</button>)}</nav><span className="header-note">A better way to find it.</span><button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={effectiveDark ? 'Switch to light theme' : 'Switch to dark theme'}>{effectiveDark ? '☀' : '☾'}</button></header><main id="main"><Suspense fallback={<p className="empty" role="status">Loading…</p>}>
+    {selectedStore ? <Inventory key={selectedStore.code} store={selectedStore} products={catalogue.variants} onBack={() => setSelectedStore(undefined)} onPage={remember}/> : page === 'products' ? <Products catalogue={catalogue} onCheck={next => { const merged = { ...filters, ...next }; setFilters(merged); navigate('find'); check(merged); }}/> : page === 'stores' ? <Stores stores={directory.map(s => ({ ...s, distanceMetres: distance(location, s) }))} favourites={favourites} toggleFavourite={toggleFavourite} onOpen={openStore}/> : <>
       <section className="hero"><div><div className="eyebrow"><span className="blue-line"/> YOUR NEXT IPHONE. CLOSER THAN YOU THINK.</div><h1>Find your <em>iPhone.</em></h1><p>Live Telstra store availability.<br className="mobile-break"/> Less searching. More finding.</p></div><div className="launch-note"><span className="launch-symbol" aria-hidden="true">↗</span><div><strong>{filters.model || 'The new iPhone lineup'}</strong><span>{days > 0 ? `Launch in ${days} ${days === 1 ? 'day' : 'days'}` : 'Check local availability'}</span><small>Across Australia</small></div></div></section>
       <form className="search-surface" onSubmit={e => { e.preventDefault(); if (locationValid) check(); }}><LocationInput value={location} onChange={setLocation} onValid={setLocationValid} disabled={scan.busy}/><div className="search-grid"><label>Model<select disabled={scan.busy} value={filters.model} onChange={e => setFilters({ ...filters, model: e.target.value, storage: '', colour: '' })}><option value="">Any model</option>{MODELS.map(m => <option key={m}>{m}</option>)}</select></label><label>Storage<select disabled={scan.busy} value={filters.storage} onChange={e => setFilters({ ...filters, storage: e.target.value })}><option value="">Any storage</option>{STORAGE_ORDER.filter(s => modelProducts.some(p => p.storage === s)).map(s => <option key={s}>{s}</option>)}</select></label><label>Colour<select disabled={scan.busy} value={filters.colour} onChange={e => setFilters({ ...filters, colour: e.target.value })}><option value="">Any colour</option>{[...new Set(modelProducts.map(p => p.colour))].map(c => <option key={c}>{c}</option>)}</select></label><label>Within<select disabled={scan.busy} value={filters.radius} onChange={e => setFilters({ ...filters, radius: Number(e.target.value) })}>{[10, 25, 50, 100, 250, 500, 0].map(r => <option key={r} value={r}>{r ? `${r} km` : 'Australia-wide'}</option>)}</select></label><button className="button primary check-stock" type="submit" disabled={scan.busy || !locationValid || !products.length}>{scan.busy ? 'Checking…' : 'Check stock'} <span aria-hidden="true">→</span></button></div><div className="search-bottom"><span>No account. Just availability.</span><button className="text-button" type="button" onClick={saveTarget}>☆ Save this search</button></div></form>
       {targets.length > 0 && <div className="targets"><span className="eyebrow">MY TARGETS</span>{targets.map(t => <div className="target" key={t.id}><button disabled={scan.busy} onClick={() => { setFilters(t.filters); setLocation(t.location); setLocationValid(true); check(t.filters, t.location); }}>{t.filters.model || 'Any model'} · {t.filters.storage || 'Any storage'} {t.filters.colour}</button><button aria-label="Remove saved target" onClick={() => { const next = targets.filter(x => x.id !== t.id); setTargets(next); writeLocal('targets', next); }}>×</button></div>)}</div>}
@@ -83,7 +112,7 @@ export default function App() {
       {scan.error && <div className="notice" role="alert"><strong>Partial results</strong><p>{scan.error}</p>{scan.canResume && <button className="button secondary" disabled={scan.busy} onClick={() => void scan.run()}>Retry remaining stores</button>}</div>}
       {!rows.length && !scan.busy && <div className="empty"><span className="empty-symbol" aria-hidden="true">⌖</span><div><h3>{scan.result.checkedAt ? 'Nothing matching right now.' : 'Your search starts here.'}</h3><p>{scan.result.checkedAt ? 'Try another colour or capacity, widen your search, or check again shortly.' : 'We’ll show exact configurations, nearby stores and the quickest way to get there.'}</p></div></div>}
       {rows.map(store => <StoreRow key={store.code} store={store} products={products} stock={stock} diff={scan.diff} favourite={favourites.includes(store.code)} onFavourite={() => toggleFavourite(store.code)} onOpen={() => openStore(store)}/>)}
-      <div className="monitor"><div><h3>Keep an eye on it.</h3><p className="muted">Refresh while this tab is open. Stock can change quickly.</p></div><label>Auto refresh<select value={interval} onChange={e => setRefreshInterval(Number(e.target.value))}>{[[0, 'Off'], [30, '30 seconds'], [60, '60 seconds'], [120, '2 minutes'], [300, '5 minutes']].map(([n, title]) => <option key={n} value={n}>{title}</option>)}</select></label><label className="check"><input type="checkbox" checked={notify} onChange={e => void notifications(e.target.checked)}/> Notify me when stock appears</label></div>
+      <div className="monitor"><div><h3>Keep an eye on it.</h3><p className="muted">Refresh while this tab is open. Stock can change quickly.</p></div><label>Auto refresh<select value={interval} onChange={e => setRefreshInterval(Number(e.target.value))}>{[[0, 'Off'], [30, '30 seconds'], [60, '60 seconds'], [120, '2 minutes'], [300, '5 minutes']].map(([n, title]) => <option key={n} value={n}>{title}</option>)}</select></label><label className="check"><input type="checkbox" checked={notify} onChange={e => void notifications(e.target.checked)}/> Notify me when stock appears</label><label className="check"><input type="checkbox" checked={sound} onChange={e => { setSound(e.target.checked); writeLocal('sound', e.target.checked); }}/> Play a sound too</label></div>
       </section>
     </>}
   </Suspense>{notice && <div className="notice toast" role="status">{notice}<button aria-label="Dismiss message" onClick={() => setNotice('')}>×</button></div>}</main><footer><span className="brand-small">Stock Finder <b>AU</b></span><p>Unofficial stock finder. Not affiliated with Apple or Telstra.</p><span>Stock is a snapshot. Call before travelling.</span></footer></>;
