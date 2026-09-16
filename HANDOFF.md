@@ -1,6 +1,14 @@
 # Current handoff
 
-Updated 2026-09-16, approximately 12:00 Australia/Sydney.
+Updated 2026-09-16, approximately 17:20 Australia/Sydney.
+
+## Manual Cloudflare deployment record (2026-09-16, ~12:00 Australia/Sydney)
+A separate session (working from a fresh clone at `/Users/michaelphillips/Development/iPhone-Stock-Checker-AU`, commit `2c82445`) ran a manual `npx wrangler deploy` before realising the app was already auto-deploying from `master` via Cloudflare's own Git integration (see Status below). That assistant did not have this information at the time. Recorded here for the trail, not as the deployment mechanism going forward — auto-deploy from `master` remains authoritative.
+- Node v24.6.0, npm 11.5.1; `npm ci` succeeded with zero audit vulnerabilities. `npm run check`, `npm test` (25 passed), `npm run build`, `npm run deploy:check` passed using Wrangler 4.132.0.
+- Wrangler OAuth authenticated; `npx wrangler deploy` succeeded. Deployment version: `6b96a186-fa13-44a9-86e2-7b53a80ca8cb`. Live URL: https://iphone-stock-finder-au.mphillips-au.workers.dev
+- Production verification: postcode 3207 returns Port Melbourne; browser stock scan for Pro Max 512GB Silver completed with 36 stores within 50 km and none available. Desktop and 390px mobile layouts inspected. Products loads and explicitly reports fallback catalogue active (0 discovered variants).
+- Global Codex setup in that environment: 14 official Cloudflare skills installed in ~/.codex/skills and five MCPs registered in ~/.codex/config.toml. API, Builds and Observability OAuth succeeded; Bindings authorization pending. Restart Codex to load MCP tools.
+- No application source changes came from that session.
 
 ## Status
 First complete implementation built. Phases 0–6 implemented, with automated regression checks and live browser smoke tests passing. App is deployed at https://iphone-stock-finder-au.mphillips-au.workers.dev/, auto-deploying from `master` (Cloudflare's own Git integration — not something in this repo's config, so there is nothing here to point to). See TASKS.md for optional follow-ups. Do not rebuild from scratch.

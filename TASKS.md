@@ -55,5 +55,5 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [x] Multi-select colours/storage in the main filter (scans every selected combination at once).
 - [x] Sound alerts.
 - [x] Dark mode.
-- [ ] Public deployment (requires user authorization and Cloudflare login).
+- [x] Public deployment authorized and verified 2026-09-16: https://iphone-stock-finder-au.mphillips-au.workers.dev (live scan and desktop/mobile smoke checks).
 
