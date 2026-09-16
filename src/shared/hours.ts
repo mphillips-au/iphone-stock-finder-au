@@ -1,5 +1,6 @@
 import type { Store } from './types';
 const zones: Record<string, string> = { VIC: 'Australia/Melbourne', NSW: 'Australia/Sydney', ACT: 'Australia/Sydney', QLD: 'Australia/Brisbane', SA: 'Australia/Adelaide', WA: 'Australia/Perth', TAS: 'Australia/Hobart', NT: 'Australia/Darwin' };
+export const WEEK_DAYS: [key: string, label: string][] = [['mon', 'Monday'], ['tue', 'Tuesday'], ['wed', 'Wednesday'], ['thu', 'Thursday'], ['fri', 'Friday'], ['sat', 'Saturday'], ['sun', 'Sunday']];
 export function hoursToday(store: Store, now = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-AU', { timeZone: zones[store.state] ?? 'Australia/Sydney', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
   const part = (type: string) => parts.find(p => p.type === type)?.value ?? '';
