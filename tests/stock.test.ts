@@ -130,6 +130,12 @@ describe('metadata and coalescing', () => {
     expect(parseProducts(`<div data-mobile-variant='${JSON.stringify({ sku, colour: 'Silver', storage: '512GB', imageUrl: 'http://insecure.example/device.jpg' })}'></div>`, 'iPhone 18 Pro Max')[0].imageUrl).toBeUndefined();
     expect(parseProducts('<img alt="iPhone 18 Pro Max" src="/images/iphone-18-pro-max.webp">' + `<div data-mobile-variant='${JSON.stringify({ sku, colour: 'Silver', storage: '512GB' })}'></div>`, 'iPhone 18 Pro Max', 'https://www.telstra.com.au/mobile-phones/iphone-18-pro-max')[0].imageUrl).toBe('https://www.telstra.com.au/images/iphone-18-pro-max.webp');
   });
+  it('collects every distinct photo for a variant into images, not just the hero shot', () => {
+    const gallery = JSON.stringify({ sku, colour: 'Silver', storage: '512GB', images: [{ src: '/a.webp' }, '/b.webp', { src: '/a.webp' }, { url: '/c.webp' }] }).replaceAll('"', '&quot;');
+    const parsed = parseProducts(`<div data-mobile-variant='${gallery}'></div>`, 'iPhone 18 Pro Max', 'https://www.telstra.com.au/mobile-phones/mobiles-on-a-plan/apple/iphone-18-pro-max');
+    expect(parsed[0].images).toEqual(['https://www.telstra.com.au/a.webp', 'https://www.telstra.com.au/b.webp', 'https://www.telstra.com.au/c.webp']);
+    expect(parsed[0].imageUrl).toBe(parsed[0].images![0]);
+  });
   it('keeps all fallback variants when discovery fails', async () => {
     const result = await getProducts(async () => new Response('', { status: 404 }));
     expect(result.variants).toHaveLength(40); expect(result.fallbackActive).toBe(true); expect(result.discoveredCount).toBe(0);

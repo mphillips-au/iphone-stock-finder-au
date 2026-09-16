@@ -43,7 +43,7 @@ const rows: [Model, string, string[], string[][]][] = [
 export const FALLBACK_PRODUCTS: ProductVariant[] = rows.flatMap(([model, productCode, colours, skus]) =>
   skus.flatMap((row, i) => row.map((sku, j) => ({
     model, productCode, storage: STORAGE_ORDER[i], colour: colours[j], sku,
-    deviceName: model, imageUrl: TELSTRA_IMAGE_FALLBACKS[model], source: 'fallback' as const,
+    deviceName: model, imageUrl: TELSTRA_IMAGE_FALLBACKS[model], images: [TELSTRA_IMAGE_FALLBACKS[model]], source: 'fallback' as const,
     marketLaunchDate: model === 'iPhone Duo' ? '2026-10-23T08:00:00+11:00' : '2026-09-18T08:00:00+10:00',
     telstraLaunchDate: model === 'iPhone Duo' ? '2026-10-16T23:00:00+11:00' : '2026-09-12T21:09:00+10:00',
   }))),
