@@ -40,20 +40,25 @@ async function writeState(db: D1Database, key: string, value: unknown): Promise<
   await db.prepare('INSERT INTO sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind(key, JSON.stringify(value)).run();
 }
 async function upsertStores(db: D1Database, stores: Store[], updatedAt: string): Promise<void> {
-  for (const s of stores) {
-    await db.prepare(
-      `INSERT INTO stores (code, name, address, suburb, postcode, state, phone, latitude, longitude, hours, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)
-       ON CONFLICT(code) DO UPDATE SET name=excluded.name, address=excluded.address, suburb=excluded.suburb, postcode=excluded.postcode, state=excluded.state, phone=excluded.phone, latitude=excluded.latitude, longitude=excluded.longitude, hours=excluded.hours, updated_at=excluded.updated_at`,
-    ).bind(s.code, s.name, s.address, s.suburb, s.postcode, s.state, s.phone ?? null, s.latitude, s.longitude, JSON.stringify(s.hours), updatedAt).run();
-  }
+  if (stores.length === 0) return;
+  const stmt = db.prepare(
+    `INSERT INTO stores (code, name, address, suburb, postcode, state, phone, latitude, longitude, hours, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+     ON CONFLICT(code) DO UPDATE SET name=excluded.name, address=excluded.address, suburb=excluded.suburb, postcode=excluded.postcode, state=excluded.state, phone=excluded.phone, latitude=excluded.latitude, longitude=excluded.longitude, hours=excluded.hours, updated_at=excluded.updated_at`,
+  );
+  // db.batch() sends every statement in one round trip instead of one await per row —
+  // the per-row await/JS overhead of the old loop was the real CPU cost driving the
+  // Workers Free plan's exceededCpu kills, not the Telstra fetch itself.
+  await db.batch(stores.map((s) =>
+    stmt.bind(s.code, s.name, s.address, s.suburb, s.postcode, s.state, s.phone ?? null, s.latitude, s.longitude, JSON.stringify(s.hours), updatedAt),
+  ));
 }
 async function upsertStock(db: D1Database, stock: Stock[], updatedAt: string): Promise<void> {
-  for (const s of stock) {
-    await db.prepare(
-      `INSERT INTO stock (store_code, sku, status, usage_type, updated_at) VALUES (?,?,?,?,?)
-       ON CONFLICT(store_code, sku) DO UPDATE SET status=excluded.status, usage_type=excluded.usage_type, updated_at=excluded.updated_at`,
-    ).bind(s.storeCode, s.sku, s.status, s.usageType, updatedAt).run();
-  }
+  if (stock.length === 0) return;
+  const stmt = db.prepare(
+    `INSERT INTO stock (store_code, sku, status, usage_type, updated_at) VALUES (?,?,?,?,?)
+     ON CONFLICT(store_code, sku) DO UPDATE SET status=excluded.status, usage_type=excluded.usage_type, updated_at=excluded.updated_at`,
+  );
+  await db.batch(stock.map((s) => stmt.bind(s.storeCode, s.sku, s.status, s.usageType, updatedAt)));
 }
 
 export interface IndexResult { pagesProcessed: number; storesUpserted: number; stockUpserted: number; cycleComplete: boolean; nextFrom: number }

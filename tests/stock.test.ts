@@ -59,7 +59,12 @@ function fakeD1() {
     }
     return { bind, ...bind() };
   }
-  return { prepare } as unknown as D1Database;
+  async function batch(statements: { run(): Promise<unknown> }[]) {
+    const results = [];
+    for (const s of statements) results.push(await s.run());
+    return results;
+  }
+  return { prepare, batch } as unknown as D1Database;
 }
 const sku = '100256812';
 const input = { lat: DEFAULT_LOCATION.lat, lon: DEFAULT_LOCATION.lon, skus: [sku], from: 0, size: 10 as const };
