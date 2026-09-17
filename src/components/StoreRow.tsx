@@ -33,7 +33,7 @@ export default function StoreRow({ store, stock, products, diff = {}, favourite,
     <div className="store-stock-panel">
       <span className="panel-label">{inStock.length ? 'In stock' : knownUnavailable ? 'Unavailable' : 'Checking…'}</span>
       <ul className="variant-rows">{visible.map(s => { const product = products.find(p => p.sku === s.sku); if (!product) return null; const swatch = COLOUR_SWATCHES[product.colour]; return <li key={s.sku} onClick={onOpen}>
-        <span className="variant-icon" aria-hidden="true">{ICONS.phone}</span>
+        {product.imageUrl ? <img className="variant-thumb" src={product.imageUrl} alt="" loading="lazy"/> : <span className="variant-icon" aria-hidden="true">{ICONS.phone}</span>}
         <span className="variant-name">{product.model} {product.storage}</span>
         <span className="variant-colour"><i style={{ background: swatch?.fill ?? 'var(--placeholder)', borderColor: swatch?.border ?? 'transparent' }}/>{product.colour}</span>
         {diff[stockKey(s)] && <span className={diff[stockKey(s)] === 'new' ? 'new-stock' : 'muted'}>{diff[stockKey(s)] === 'new' ? 'NEW' : 'GONE'}</span>}

@@ -76,6 +76,7 @@ body{margin:0;background:var(--bg);color:var(--text);transition:background .15s,
 .variant-rows li:last-child{border-bottom:0}
 .variant-rows li:hover{background:var(--surface-alt)}
 .variant-icon{color:var(--muted-2);flex-shrink:0}
+.variant-thumb{width:18px;height:24px;object-fit:contain;flex-shrink:0;background:var(--surface-alt);border-radius:3px}
 .variant-icon svg{width:14px;height:20px}
 .variant-name{font-weight:600}
 .variant-colour{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;margin-left:auto}
