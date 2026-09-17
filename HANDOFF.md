@@ -1,6 +1,9 @@
 # Current handoff
 
-Updated 2026-09-17, approximately 15:10 Australia/Sydney.
+Updated 2026-09-17, approximately 15:15 Australia/Sydney.
+
+## Session update — Uniform 2-column Storage/Colour grids (follow-up, same session, post-merge)
+After PR #11 merged, user flagged (via a Launch element pick on the live search box) that Storage/Colour chips weren't wrapping into a clean 2×2 grid — `.chip-group` was `display:flex;flex-wrap:wrap`, which packs chips greedily by content width, so Storage wrapped 3+1 and Colour wrapped 1+2+1 depending on label length ("Burgundy" being longer pushed everything else around it). Changed `.chip-group` (`src/styles.css`) to `display:grid;grid-template-columns:repeat(2,1fr)` — always exactly 2 per row regardless of label length, matching both mockups' uniform grids. Verified `npm run check`/`npm test`/`npm run build` pass and confirmed visually via `wrangler dev --local` at desktop (1440px) and mobile (375px): both Storage and Colour now show clean 2×2 grids in both viewports.
 
 ## Session update — Real per-variant product photo thumbnail (follow-up, same session)
 User pointed at the per-variant row's icon specifically (via a Launch element pick — `.variant-icon` svg inside `.variant-rows li`), not the store card's thumbnail: both mockups show a small real photo of the phone in that exact variant's colour next to each "In stock" line (confirmed by cropping `Mockup2.png` at that exact region — genuinely a colour-matched product photo, not a generic phone-outline icon like the one we had).
