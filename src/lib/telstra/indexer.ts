@@ -61,7 +61,7 @@ export async function runIndexCycle(db: D1Database, ctx: RequestContext = contex
   // Leave enough budget for one more full page (a SKU-batch split can add extra requests)
   // before stopping, rather than starting a page we can't finish.
   while (ctx.remaining > 4 && pagesProcessed < MAX_PAGES_PER_RUN) {
-    const page = await stockPage({ lat: SEED.lat, lon: SEED.lon, from, size: 10, skus: TRACKED_SKUS }, INDEXER_SKU_BATCH_SIZE, ctx);
+    const page = await stockPage({ lat: SEED.lat, lon: SEED.lon, from, size: 10, skus: TRACKED_SKUS }, INDEXER_SKU_BATCH_SIZE, ctx, INDEXER_SKU_BATCH_SIZE);
     pagesProcessed++;
     if (page.stores.length === 0) {
       emptyStreak++;

@@ -2,7 +2,10 @@ import type { PageInput, Stock, StockPage, Store } from '../../shared/types';
 import { normaliseStock } from './normalise';
 import { context, upstream, UpstreamError, type RequestContext } from './http';
 export const STOCK_URL = 'https://prod.okapi.ogw.evolve.okapi.telstra.com/tcom-ext/v1/stock/check';
-export async function stockPage(input: PageInput, batchSize = 6, ctx: RequestContext = context()): Promise<StockPage> {
+// Live per-visitor requests (src/worker.ts) stay capped at 8 regardless of configured batchSize,
+// keeping each visitor's Telstra hit small; the indexer (src/lib/telstra/indexer.ts) passes its own
+// higher maxBatch since it spends a whole cron budget, not one page load.
+export async function stockPage(input: PageInput, batchSize = 6, ctx: RequestContext = context(), maxBatch = 8): Promise<StockPage> {
   const stores = new Map<string, Store>(), stock = new Map<string, Stock>(), failedSkus: string[] = [];
   let pageLength: number | null = null, inconsistent = false;
   let pageCodes: string[] | null = null;
@@ -24,7 +27,7 @@ export async function stockPage(input: PageInput, batchSize = 6, ctx: RequestCon
       } else failedSkus.push(...skus);
     }
   }
-  const size = Math.max(1, Math.min(8, Math.floor(batchSize) || 6));
+  const size = Math.max(1, Math.min(maxBatch, Math.floor(batchSize) || 6));
   for (let i = 0; i < input.skus.length; i += size) await batch(input.skus.slice(i, i + size));
   return {
     stores: [...stores.values()], stock: [...stock.values()], from: input.from,
