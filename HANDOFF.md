@@ -1,6 +1,13 @@
 # Current handoff
 
-Updated 2026-09-17, approximately 15:25 Australia/Sydney.
+Updated 2026-09-17, approximately 15:35 Australia/Sydney.
+
+## Session update — Reverted the stretch/centre hack; fixed alignment properly (follow-up, same session)
+User called the previous entry's fix out immediately: the "Check stock" button was now huge (stretched to match the tallest 2-row chip column's height) and the field boxes no longer lined up consistently under their labels (Model/Search-radius's controls had shifted down to sit vertically centred in their stretched field, while Location/Storage/Colour stayed pinned under their own labels — two different vertical rhythms in the same row). The `align-items:stretch` + auto-margin-centring approach from the previous entry was the wrong fix entirely; reverted it:
+- `.search-row` back to `align-items:flex-start`; removed `.search-field{display:flex;flex-direction:column}` and the `.select-wrap` auto-margin centring rule. Every field's control now sits at the same fixed offset directly under its own label again — Location's input, Model's select, the first row of Storage/Colour chips, and Search radius's select all start at the same Y, which is what "uniform" actually meant here.
+- The Check-stock button has no label above it, so left at plain `flex-start` it would sit level with the *labels* (too high) rather than the *controls*. Given `margin-top:24px` (empirically matches one label line + its 8px gap) so it drops to line up with the single-line controls instead — back to a normal `.button`-height button, not stretched.
+- Mobile centring (the original, correct part of the earlier ask) preserved without relying on row-level stretch: added `.check-stock{width:100%;justify-content:center;margin-top:0}` directly inside the existing `max-width:600px` media query (resetting the new desktop `margin-top:24px` back to 0 there, since mobile fields already have their own `gap:16px` spacing).
+Verified this session: `npm run check`, `npm test` (34 passed), `npm run build` all pass. Visually re-confirmed via `wrangler dev --local` at 1440px desktop (button back to normal size, every control now genuinely lines up under its label in one consistent row) and 375px mobile (full-width centred button unaffected, still correct).
 
 ## Session update — Search row vertical alignment; radius options trimmed (follow-up, same session)
 Follow-up to the chip-grid fix above (still unmerged as PR #12 at the time of this entry): user felt the desktop search row looked "silly" — the 2-row Storage/Colour chip groups made the row taller than the single-line Location/Model/Radius fields and the Check-stock button, which stayed pinned to the top with dead space beneath, and asked for it to look uniform/vertically centred; separately asked for the mobile Check-stock button to be centred.
