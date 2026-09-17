@@ -9,10 +9,11 @@ import { available } from '../shared/scan';
 const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 function markerIcon(colour: string, big = false) {
-  const size = big ? 26 : 18;
+  const w = big ? 30 : 24, h = Math.round(w * 4 / 3);
   return L.divIcon({
-    className: 'store-pin', html: `<span style="background:${colour};width:${size}px;height:${size}px"></span>`,
-    iconSize: [size, size], iconAnchor: [size / 2, size / 2], popupAnchor: [0, -size / 2 - 2],
+    className: 'store-pin',
+    html: `<svg width="${w}" height="${h}" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="${colour}"/><circle cx="12" cy="12" r="5" fill="#fff"/></svg>`,
+    iconSize: [w, h], iconAnchor: [w / 2, h], popupAnchor: [0, -h + 4],
   });
 }
 export default function StoreMap({ stores, stock, center, onSelect, note }: { stores: Store[]; stock: Stock[]; center: Location; onSelect?: (store: Store) => void; note?: string }) {
