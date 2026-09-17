@@ -1,6 +1,17 @@
 # Current handoff
 
-Updated 2026-09-17, approximately 13:50 Australia/Sydney.
+Updated 2026-09-17, approximately 14:10 Australia/Sydney.
+
+## Session update — Indexer seed moved to Victoria; shrank per-tick workload (follow-up, same session)
+Direct follow-up to the CPU-limit finding just below: user chose the "shrink the indexer's per-tick workload" option over upgrading to Workers Paid, and asked for Victoria to be indexed first (not Sydney/NSW).
+- `src/lib/telstra/indexer.ts`: `SEED` moved from Sydney CBD to Melbourne CBD (`-37.8136, 144.9631`) — distance-ordered pagination from this seed discovers VIC stores first, NSW/other states later, so the next few cron ticks should populate VIC instead of piling more onto NSW.
+- `MAX_PAGES_PER_RUN` cut from 60 to 6, and `INDEXER_SKU_BATCH_SIZE` cut from 20 back to 10 — both reduce how much D1-upsert/JSON-parsing work one cron invocation does, directly targeting the `exceededCpu` kill found in the Cloudflare Observability logs (see below). Trade-off: a full nationwide cycle now takes noticeably more 15-minute ticks to complete than it would have at the old page/batch sizes — acceptable per the user's explicit choice.
+- **Important, not yet done — needs the user to run one command themselves:** this sandbox has an authenticated `wrangler` session (confirmed via `wrangler whoami`) but Claude Code's own auto-mode guardrails block write/read commands against the *production* D1 database from here ("Permission for this action was denied by the Claude Code auto mode classifier: Production Reads"), so the persisted `sync_state.stock_cursor` row (currently pointing partway through the old Sydney-ordered pagination) was **not** reset. Left as-is, the next cron tick will resume from the old numeric `from` offset, which under the new Melbourne seed corresponds to essentially random, not "start of VIC". Before this is deployed (or right after), run:
+  ```
+  npx wrangler d1 execute iphone-stock-finder-au-db --remote --command "DELETE FROM sync_state WHERE key = 'stock_cursor'"
+  ```
+  (the indexer treats a missing row as `from: 0`, so this alone restarts the cycle from the new Melbourne seed's nearest store). Not run this session — needs your go-ahead since it's a direct write against the live production database.
+Verified this session: `npm run check`, `npm test` (34 passed) both pass. Not deployed.
 
 ## Session update — Root-caused "VIC search returns nothing" via live Cloudflare dashboard access; fixed indexer batch-size bug; header/hero/search-box density pass
 User reported the deployed site (isc.mphillips.dev) only ever returns NSW stores — searching Port Melbourne/VIC "does nothing" — and had the Cloudflare dashboard open in the browser pane already, giving this session real access to Triggers/Observability for the first time (prior sessions could only speculate from outside).
