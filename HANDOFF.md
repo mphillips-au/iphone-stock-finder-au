@@ -1,6 +1,12 @@
 # Current handoff
 
-Updated 2026-09-17, approximately 15:35 Australia/Sydney.
+Updated 2026-09-17, approximately 15:40 Australia/Sydney.
+
+## Session update — Stack Search radius + Check stock on desktop to widen Location (follow-up, same session)
+User's idea to reclaim horizontal space for the Location field: stack Search radius (select) above Check stock (button) in one narrow column instead of two separate row items, on desktop.
+- `src/App.tsx`: wrapped the Search-radius `<select>` and the Check-stock `<button>` together in one new `<div className="search-field search-field-compact radius-stack">` (previously two separate flex items in `.search-row` — a `<label className="search-field search-field-compact">` for radius and a sibling `<button>`). The inner "Search radius" text is now a plain `<label>` with no class of its own; it still inherits the `.search-field`/`.search-field-compact` typography from the wrapping div (font-size/color/weight are all inheritable CSS properties), so no visual change there.
+- `src/styles.css`: new `.radius-stack{display:flex;flex-direction:column;gap:8px}` and `.radius-stack .check-stock{margin-top:2px;width:100%}` (button now spans the stack's own — narrow — width, not the full search row). `.search-field-location` changed from `min-width:200px` alone to `flex:1.7;min-width:220px`, taking the horizontal space freed up by collapsing radius+button into one column.
+Verified this session: `npm run check`, `npm test` (34 passed), `npm run build` all pass. Visually confirmed via `wrangler dev --local`: desktop (1440px) now shows a visibly wider Location field, a compact stacked Search-radius/Check-stock column on the right, and every other field still lines up correctly under its label; mobile (375px) is unaffected (search-row already stacks to one column there, radius-stack behaves the same as a plain field in that context).
 
 ## Session update — Reverted the stretch/centre hack; fixed alignment properly (follow-up, same session)
 User called the previous entry's fix out immediately: the "Check stock" button was now huge (stretched to match the tallest 2-row chip column's height) and the field boxes no longer lined up consistently under their labels (Model/Search-radius's controls had shifted down to sit vertically centred in their stretched field, while Location/Storage/Colour stayed pinned under their own labels — two different vertical rhythms in the same row). The `align-items:stretch` + auto-margin-centring approach from the previous entry was the wrong fix entirely; reverted it:
