@@ -6,14 +6,20 @@ import { stockPage } from './stock';
 // Distance-ordered store pagination is exhaustive: page deep enough from any single seed
 // point and every Telstra store nationwide eventually appears (furthest last). The seed's
 // own location only affects discovery order, never coverage, so one fixed seed is enough —
-// no grid of regional points needed. Sydney CBD is arbitrary.
-const SEED = { lat: -33.8688, lon: 151.2093 };
+// no grid of regional points needed. Melbourne CBD is deliberate (not arbitrary like the old
+// Sydney seed): the user wants Victoria indexed first.
+const SEED = { lat: -37.8136, lon: 144.9631 };
 // Larger than the live per-request batch (src/worker.ts) since the indexer has a whole
 // cron budget to spend rather than one visitor's page load; 413 splitting still applies.
-export const INDEXER_SKU_BATCH_SIZE = 20;
+// Kept modest (not the previous 20) to keep each cron invocation's D1-upsert/parsing work
+// small enough to stay under the Workers Free plan's CPU-time ceiling — see HANDOFF.md.
+export const INDEXER_SKU_BATCH_SIZE = 10;
 // Safety valve so one invocation can never spin forever even if `remaining` bookkeeping
-// (see http.ts) somehow desyncs from actual request count.
-const MAX_PAGES_PER_RUN = 60;
+// (see http.ts) somehow desyncs from actual request count. Deliberately small (not the
+// previous 60): fewer store pages, and therefore fewer D1 upserts, per cron tick keeps CPU
+// time per invocation low enough to avoid the exceededCpu kills seen in production, at the
+// cost of more ticks to finish a full nationwide cycle.
+const MAX_PAGES_PER_RUN = 6;
 // Stop a cycle once this many consecutive pages return zero stores — Telstra's paging
 // keeps returning empty pages past the end of its real store list, it never "runs out"
 // with an error, so an empty streak is the only reliable end-of-list signal.
@@ -61,7 +67,7 @@ export async function runIndexCycle(db: D1Database, ctx: RequestContext = contex
   // Leave enough budget for one more full page (a SKU-batch split can add extra requests)
   // before stopping, rather than starting a page we can't finish.
   while (ctx.remaining > 4 && pagesProcessed < MAX_PAGES_PER_RUN) {
-    const page = await stockPage({ lat: SEED.lat, lon: SEED.lon, from, size: 10, skus: TRACKED_SKUS }, INDEXER_SKU_BATCH_SIZE, ctx);
+    const page = await stockPage({ lat: SEED.lat, lon: SEED.lon, from, size: 10, skus: TRACKED_SKUS }, INDEXER_SKU_BATCH_SIZE, ctx, INDEXER_SKU_BATCH_SIZE);
     pagesProcessed++;
     if (page.stores.length === 0) {
       emptyStreak++;
