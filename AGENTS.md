@@ -16,15 +16,15 @@ Read this file, `HANDOFF.md`, and `TASKS.md` first. Read only the relevant maste
 
 ## Non-negotiable architecture
 - React + Vite + strict TypeScript; one Cloudflare Worker with static assets and one D1 database (`DB` binding). No authentication, no traditional server.
-- Browser calls only `/api/*`. Visitor requests never call Telstra directly — `/api/stock/page` and `/api/status` read the nationwide D1 snapshot. Only the cron-triggered indexer (`src/lib/telstra/indexer.ts`, invoked from `scheduled()` in `src/worker.ts`) calls Telstra live. This is deliberate: it's what keeps a busy site from ever causing Telstra-side rate limits or blocks, since Telstra only ever hears from our own cron job. `stockPage`/live-Telstra calls remain as the indexer's implementation and as a short-lived fallback for `/api/stock/page` before D1 has ever been populated (e.g. right after a fresh deploy, before the first cron tick) — never as the normal per-visitor path.
-- The indexer only ever queries Telstra for `TRACKED_SKUS` (`src/data/products.ts`, this app's own fixed 40-SKU catalogue) — never an arbitrary/open-ended SKU list. `validatePage` in `src/worker.ts` rejects any requested SKU outside that set.
-- Indexing is staggered, not a single burst: each cron tick (`triggers.crons`, every 15 minutes) advances a persisted cursor by one budget-bounded slice (same request budget live scans use — see `http.ts`), so a full nationwide cycle spans several ticks. Distance-ordered pagination from one fixed seed point is exhaustive on its own (deep-enough paging reaches every store nationwide, furthest last) — do not add a grid of regional seed points, it's unnecessary complexity for the same coverage.
+- Browser calls only `/api/*`. Manual `/api/stock/page` requests use bounded live Telstra lookups with short caching. D1 retains the historical Stores directory and status timestamps; saved D1 stock is not the normal search path.
+- Stock queries are restricted to `TRACKED_SKUS` (`src/data/products.ts`). `validatePage` rejects any SKU outside that set.
+- Manual mode is the user-approved default to reduce Cloudflare usage: keep `triggers.crons` empty and the Worker without a scheduled handler. Restoring background indexing requires an explicit user request. The retained indexer modules are inactive.
 - Stock requests always use `size: 10`, offsets in multiples of 10, sequential bounded SKU batches, and bounded retries.
 - One store page per Worker request. Budget every upstream attempt (including 413 splits and retries) below free-tier subrequest limits.
 - Exact stock status `available` is available. Missing/error/unknown stock is UNKNOWN, never silently unavailable.
 - Join stock place.id to exact storecode; dedupe products by SKU and stock by storecode+SKU.
 - Preserve successful pages/batches on failure and permit continuation. Never report a partial scan as complete.
-- Store inventory matches exact storecode, never array position. Pagination remains browser-orchestrated (now over the D1 snapshot, not live Telstra).
+- Store inventory matches exact storecode, never array position. Pagination remains browser-orchestrated over bounded live stock pages.
 - Cache by coordinates, sorted SKU set, offset and relevant parameters. The client polls only the tiny `/api/status` endpoint (never Telstra) for the "last updated" badge, paused when hidden; auto-refresh of the stock scan itself defaults off and still pauses when hidden.
 - Treat all upstream data as untrusted; validate inputs and tolerate schema drift without inventing stock.
 - Fallback SKUs and launch dates are supplied by the master prompt, not independently verified product facts.

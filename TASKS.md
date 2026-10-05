@@ -68,3 +68,8 @@ Check a task only after its acceptance check passes. Runtime evidence goes in HA
 - [x] Verified live against real telstra.com.au (2026-09-16): Telstra's product-page JSON does carry a genuine multi-image gallery, distinct per colour. Found and fixed a real bug in the process — Telstra 403s the product-page fetch when no User-Agent is sent, so production was silently stuck on the fallback catalogue; see HANDOFF.md.
 - [x] Stores page redesigned to match user-supplied Telstra-store-directory mockup: full nationwide store directory (new `/api/stores` endpoint reading D1), search/state/open-now/has-stock filters, paginated list + detail panel + map. Real logo (user-supplied) now used for header brand mark and favicons.
 
+
+## Manual mode — 6 October 2026
+- [x] Disable live Cloudflare cron and scheduled indexing; verify zero registered schedules.
+- [x] Make manual stock searches query current Telstra stock rather than historical D1 snapshots; regression and live API verified.
+- Historical cron tasks above are superseded by manual mode. Future deployments use the empty cron configuration and no scheduled handler.

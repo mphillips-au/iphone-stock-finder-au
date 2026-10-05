@@ -11,10 +11,10 @@
   },
   "vars": { "SKU_BATCH_SIZE": "6", "DEBUG_UPSTREAM": "false" },
   "observability": { "enabled": true },
-  // Nationwide store/stock snapshot written by the cron indexer, read by /api/stock/page.
+  // Retained historical store directory; manual stock checks query Telstra directly.
   "d1_databases": [
     { "binding": "DB", "database_name": "iphone-stock-finder-au-db", "database_id": "df44669c-d450-4234-9334-045ae74e7629" },
   ],
-  // Every 15 minutes, advances one staggered slice of the nationwide indexing cycle.
-  "triggers": { "crons": ["*/15 * * * *"] },
+  // Automatic stock indexing is disabled; checks run only on demand.
+  "triggers": { "crons": [] },
 }
