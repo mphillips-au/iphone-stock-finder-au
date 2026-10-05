@@ -9,3 +9,5 @@
 - Product UI follows the creator's design context in the master prompt; no additional design interview is needed.
 - Live verification found Workers fetch must not be invoked as a method of an arbitrary context object; the default transport wraps global fetch. Workers support redirect `manual`, not `error`; non-2xx redirects are rejected explicitly. Keep the runtime smoke test in addition to Node fixture tests.
 - Secondary-screen chunk failures (e.g. an old tab across a deployment) have a reload recovery screen rather than leaving the app blank.
+
+- 2026-10-06: User requested manual stock checks to reduce Cloudflare usage. Disable cron triggers and remove the scheduled handler. Manual `/api/stock/page` requests query Telstra with existing bounded batching and short caching, bypassing historical D1 stock. Preserve D1 directory data.

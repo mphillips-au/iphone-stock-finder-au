@@ -7,8 +7,8 @@ import { getProducts, parseProducts } from '../src/lib/telstra/products';
 import { runIndexCycle, readLastFullCycleAt } from '../src/lib/telstra/indexer';
 import { snapshotPage, readStatus, directoryStores } from '../src/lib/telstra/snapshot';
 import { available, changes, groupInventory, mergePages, RadiusGuard, sortStores, updateSnapshot } from '../src/shared/scan';
-import { DEFAULT_LOCATION, type Stock, type Store } from '../src/shared/types';
-import { validatePage } from '../src/worker';
+import { DEFAULT_LOCATION, type Stock, type StockPage, type Store } from '../src/shared/types';
+import worker, { validatePage } from '../src/worker';
 import { cached } from '../src/lib/telstra/cache';
 import { hoursToday } from '../src/shared/hours';
 import realStock from '../docs/stock-probe.json';
@@ -243,6 +243,21 @@ async function seedStock(db: D1Database, storeCode: string, skuValue: string, st
   await db.prepare('INSERT INTO stock (store_code,sku,status,usage_type,updated_at) VALUES (?,?,?,?,?)').bind(storeCode, skuValue, status, 'other', updatedAt).run();
 }
 describe('background indexer and nationwide snapshot', () => {
+  it('manual stock checks fetch current upstream stock even when D1 contains an old snapshot', async () => {
+    const db = fakeD1();
+    await seedStore(db, 'OLD', DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon, '2026-09-01T00:00:00Z');
+    await seedStock(db, 'OLD', sku, 'unavailable', '2026-09-01T00:00:00Z');
+    vi.stubGlobal('caches', { default: undefined });
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(payload(1))));
+    try {
+      const response = await worker.fetch(new Request('https://stock.example/api/stock/page', { method: 'POST', body: JSON.stringify(input) }), { DB: db, ASSETS: { fetch: async () => new Response(), connect: () => { throw new Error("Assets do not use sockets"); } } });
+      expect(response.status).toBe(200);
+      const result = await response.json<StockPage>();
+      expect(result.stores.map((s: Store) => s.code)).toEqual(['S0']);
+      expect(result.stock).toContainEqual({ storeCode: 'S0', sku, status: 'available', usageType: 'other' });
+      expect(result.snapshotAt).toBeUndefined();
+    } finally { vi.unstubAllGlobals(); }
+  });
   it('enumerates a whole distance-ordered cycle in one budget-bounded run when the budget allows it', async () => {
     indexFetcher.mockClear();
     const db = fakeD1();

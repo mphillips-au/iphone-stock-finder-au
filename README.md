@@ -1,6 +1,6 @@
 # Stock Finder AU
 
-A personal, unofficial iPhone launch-day utility: find matching configurations at nearby Telstra stores and inspect a specific store's tracked inventory. React, Vite and strict TypeScript, served by one Cloudflare Worker with static assets and a D1 database. No accounts, no per-visitor Telstra traffic — see "Background indexer" below.
+A personal, unofficial iPhone launch-day utility: find matching configurations at nearby Telstra stores and inspect a specific store's tracked inventory. React, Vite and strict TypeScript, served by one Cloudflare Worker with static assets and a D1 database. No accounts. Automatic background stock updates are disabled; stock searches query Telstra on demand.
 
 Production: https://iphone-stock-finder-au.mphillips-au.workers.dev
 
@@ -37,29 +37,20 @@ Paste this into the next assistant:
 
 ## Architecture
 
-Browser → same-origin Worker API → D1 snapshot (visitor traffic never reaches Telstra) → normalised results. A Cloudflare Cron Trigger separately runs `src/lib/telstra/indexer.ts`, which is the only thing that talks to Telstra live. Only `src/lib/telstra` handles upstream formats. `src/shared` contains domain logic and types. `src/client/useScan.ts` orchestrates progressive pages and partial retries against the snapshot. Secondary screens (Products, Stores, Inventory, the Leaflet map) are lazy-loaded.
+Browser → same-origin Worker API → live Telstra stock lookup → normalised results. Stock checks run on demand, with auto-refresh off by default. The D1 database retains the historical store directory and its update timestamps. Secondary screens are lazy-loaded.
 
 - `GET /api/products`: discovery from the three configured product pages plus fallback catalogue.
 - `GET /api/location?q=3207`: debounced suburb/postcode lookup.
-- `POST /api/stock/page`: `{lat, lon, skus, from, size:10}`; one page of the nationwide D1 snapshot, nearest-first. Falls back to a live Telstra lookup only if D1 has never been populated (e.g. before the first cron cycle after a fresh deploy). `skus` must be a subset of `TRACKED_SKUS` (`src/data/products.ts`) — the indexer and the read API only ever know about this app's own 40 tracked configurations, never an arbitrary/open-ended SKU list.
+- `POST /api/stock/page`: `{lat, lon, skus, from, size:10}`; one page of current Telstra stock for the selected location and tracked SKUs, cached for 20 seconds. Saved D1 stock is not served by this endpoint.
 - `GET /api/status`: indexing health (`storeCount`, `oldestUpdate`, `lastFullCycleAt`) for the "last updated" badge in the header.
 - Store inventory uses the same paged API at the store coordinates and matches exact store code.
 - Store directory accumulates in browser localStorage (recently viewed + favourites); the full nationwide store list lives in D1, not in the browser.
 
-## Background indexer
+## Manual stock checks
 
-`scheduled()` in `src/worker.ts` fires every 15 minutes (`triggers.crons` in `wrangler.jsonc`) and calls `runIndexCycle` (`src/lib/telstra/indexer.ts`), which advances a persisted cursor (`sync_state` table) through Telstra's store list, paging from a single fixed seed point (distance-ordered pagination is exhaustive — page deep enough from any one point and every store nationwide eventually appears, furthest last, so no grid of regional seed points is needed). Each cron tick only spends its usual live-request budget (`http.ts`'s 40-attempt cap, same one live scans use), so a full nationwide cycle is naturally staggered across several ticks rather than hitting Telstra all at once — this is also what keeps a busy site from ever causing Telstra rate limits or blocks: Telstra only ever hears from this one cron job, never from visitor traffic. Results upsert into D1's `stores`/`stock` tables (schema: `migrations/0001_init.sql`); `/api/stock/page` and `/api/status` just read that snapshot.
+Automatic nationwide indexing was disabled on 6 October 2026 to reduce Cloudflare usage. `triggers.crons` is empty and the Worker has no scheduled handler. Click **Check stock** to perform a live lookup; browser auto-refresh defaults to Off. Checks do not rewrite the nationwide snapshot. The Stores directory and header update badge reflect historical D1 data, not the freshness of a manual search.
 
-First-time D1 setup (one-off, needs your own Cloudflare account):
-
-```sh
-npx wrangler d1 create iphone-stock-finder-au-db
-# paste the returned database_id into wrangler.jsonc's d1_databases entry
-npx wrangler d1 execute iphone-stock-finder-au-db --local --file=migrations/0001_init.sql   # for local dev
-npx wrangler d1 execute iphone-stock-finder-au-db --remote --file=migrations/0001_init.sql  # before first deploy
-```
-
-Cron Triggers and D1 are both available on Cloudflare's free plan at this app's scale (one seed point, 40 tracked SKUs, a few hundred stores). Cron doesn't fire in `wrangler dev`; trigger a slice manually with `curl http://localhost:8787/cdn-cgi/local/scheduled`.
+The indexer and snapshot modules remain available for a future explicit decision to restore background indexing. Do not redeploy an older configuration with `*/15 * * * *`, which would restore the schedule.
 
 ## Map
 
@@ -79,7 +70,7 @@ Successful batches/pages remain visible on failure. Retry sends only failed SKUs
 
 ## Cache and limits
 
-Cloudflare Cache API TTLs: snapshot stock pages 60 seconds; live-fallback stock 20 seconds; status 30 seconds; geo 24 hours; catalogue 30 minutes. Stock keys include exact coordinates, sorted unique SKU set, offset and size. Partial stock responses and empty geo lookups are not cached. Identical in-flight work coalesces within a Worker isolate; this is not a global rate limiter. Cache availability and coalescing across isolates are best-effort.
+Cloudflare Cache API TTLs: manual stock pages 20 seconds; status 30 seconds; geo 24 hours; catalogue 30 minutes. Stock keys include exact coordinates, sorted unique SKU set, offset and size. Partial stock responses and empty geo lookups are not cached. Identical in-flight work coalesces within a Worker isolate; this is not a global rate limiter. Cache availability and coalescing across isolates are best-effort.
 
 Auto-refresh is off initially, never overlaps a scan, skips hidden tabs, and resumes on a subsequent visible interval. Partial scans require explicit retry. Browser notifications require opt-in and an actual observed unavailable→available transition. Mobile browser support varies; no push service or service worker is used. Stock and preferences remain on this device. Geolocation runs only after a click.
 
@@ -102,7 +93,7 @@ npm run deploy:check
 
 Tests cover captured Telstra responses, normalisation, joins, deduplication, pagination, 413 handling, budget/retries, partial preservation, geo, parser fallback, radius rules, sorting, changes, inventory grouping, cache coalescing, and the indexer/snapshot pair (staggered cursor resumption, nearest-first D1 reads, tracked-SKU restriction) against an in-memory D1 fake. Captures in `docs/*-probe.json` are historical fixtures, never served as live results.
 
-After authorising public deployment, authenticate to your Cloudflare account, create and migrate the D1 database (one-off, see "Background indexer" above), then deploy:
+After authorising public deployment, authenticate to your Cloudflare account, retain the existing D1 database for the saved store directory, then deploy:
 
 ```sh
 npx wrangler login
